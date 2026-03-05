@@ -457,10 +457,6 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 </div>
 
 <div class="toast" id="toast"></div>
-<!-- Local file warning -->
-<div id="localWarn" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#8b0000;padding:8px 16px;text-align:center;font-family:Orbitron,monospace;font-size:10px;letter-spacing:1px;color:#fff;cursor:pointer" onclick="window.open('https://vercel.com','_blank')">
-  ⚠ LOCAL FILE DETECTED — API calls are blocked. Upload to <u>Vercel.com</u> (free, 1 min) to use JARVIS. Click here →
-</div>
 
 
 <div class="bg-glow"></div>
@@ -490,8 +486,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
     <div class="m-h-row2">
       <div class="sbars idle" id="mSbars"><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div></div>
       <div class="m-status" id="mStatus">● STANDBY</div>
-      <div onclick="openSettings()" style="font-family:'Orbitron',monospace;font-size:9px;color:rgba(243,156,18,.8);cursor:pointer;padding:2px 6px;border:1px solid rgba(243,156,18,.3);border-radius:2px;margin-left:auto" onmouseover="this.style.color='#f39c12'" onmouseout="this.style.color='rgba(243,156,18,.8)'">⚙</div>
       <div class="m-time" id="mTime">--:--</div>
+      <span onclick="openSettings()" style="font-family:'Orbitron',monospace;font-size:9px;color:rgba(243,156,18,.7);cursor:pointer;padding:2px 6px;border:1px solid rgba(243,156,18,.25);margin-left:4px" onmouseover="this.style.color='#f39c12'" onmouseout="this.style.color='rgba(243,156,18,.7)'">⚙</span>
       <div class="m-mode-btns">
         <div class="m-mbtn on" id="mBtnV" onclick="mSwitch('voice')">VOICE</div>
         <div class="m-mbtn" id="mBtnC" onclick="mSwitch('chat')">CHAT</div>
@@ -610,7 +606,14 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
       <div class="d-modebtn">
         <div class="d-mbtn on" id="dBtnV" onclick="dSwitch('voice')">VOICE MODE</div>
         <div class="d-mbtn" id="dBtnC" onclick="dSwitch('chat')">CHAT MODE</div>
-        <div onclick="openSettings()" style="margin-top:5px;text-align:center;padding:4px 8px;border:1px solid rgba(243,156,18,.35);color:rgba(243,156,18,.8);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;letter-spacing:2px" onmouseover="this.style.borderColor='#f39c12';this.style.color='#f39c12'" onmouseout="this.style.borderColor='rgba(243,156,18,.35)';this.style.color='rgba(243,156,18,.8)'">⚙ SETTINGS</div>
+        <div onclick="openSettings()"
+          style="margin-top:6px;padding:5px 0;text-align:center;border:1px solid rgba(243,156,18,.3);
+          color:rgba(243,156,18,.75);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;
+          cursor:pointer;transition:all .2s"
+          onmouseover="this.style.color='#f39c12';this.style.borderColor='rgba(243,156,18,.7)'"
+          onmouseout="this.style.color='rgba(243,156,18,.75)';this.style.borderColor='rgba(243,156,18,.3)'">
+          ⚙ SETTINGS
+        </div>
       </div>
     </div>
   </div>
@@ -1139,140 +1142,269 @@ setTimeout(() => {
 //  SETTINGS FUNCTIONS
 // ══════════════════════════════════
 // ── STATE ──
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
 let voiceRespOn = localStorage.getItem('jarvisVoiceResp') !== 'false';
+const OWNER_PIN  = localStorage.getItem('jarvisOwnerPin') || '1234';
+let _unlocked    = false;
 
-// ── PIN LOCK: hardcoded owner PIN ──
-const OWNER_PIN = '1234'; // Change this to your PIN
-let _pinUnlocked = false;
-
-// ── SETTINGS: open/close ──
+// ═══════════════════════════════════════════
+//  SETTINGS PANEL
+// ═══════════════════════════════════════════
 function openSettings() {
-  document.getElementById('settOverlay').style.display = 'flex';
-  const savedKey = localStorage.getItem('jarvisApiKey') || '';
-  const inp = document.getElementById('apiKeyInp');
-  if (inp) inp.value = savedKey ? (savedKey.slice(0,8) + '••••' + savedKey.slice(-4)) : '';
-  document.getElementById('modelSel').value = localStorage.getItem('jarvisModel') || 'llama-3.3-70b-versatile';
-  _updateVRToggle();
-  // Show/hide locked section
-  document.getElementById('apiLocked').style.display = _pinUnlocked ? 'none' : 'flex';
-  document.getElementById('apiUnlocked').style.display = _pinUnlocked ? 'block' : 'none';
-}
-function closeSettings() {
-  document.getElementById('settOverlay').style.display = 'none';
-  _pinUnlocked = false; // re-lock on close
+  const ov = document.getElementById('settOverlay');
+  if (!ov) return;
+  ov.style.display = 'flex';
+  // Model
+  const ms = document.getElementById('modelSel');
+  if (ms) ms.value = localStorage.getItem('jarvisModel') || 'llama-3.3-70b-versatile';
+  // Voice toggle
+  _syncVoiceToggle();
+  // Show key status - never pre-fill the actual key into input
+  const hasKey = !!localStorage.getItem('jarvisApiKey');
+  const keySt  = document.getElementById('keySavedSt');
+  if (keySt) {
+    keySt.textContent = hasKey ? '✓ API key is saved' : '⚠ No API key saved';
+    keySt.style.color = hasKey ? '#2ecc71' : '#e74c3c';
+  }
+  // Lock state
+  _setLock(!_unlocked);
 }
 
-// ── API KEY ──
+function closeSettings() {
+  const ov = document.getElementById('settOverlay');
+  if (ov) ov.style.display = 'none';
+  _unlocked = false;
+  _setLock(true);
+}
+
+function _setLock(locked) {
+  const L = document.getElementById('apiLocked');
+  const U = document.getElementById('apiUnlocked');
+  if (L) L.style.display = locked ? 'flex' : 'none';
+  if (U) U.style.display = locked ? 'none'  : 'block';
+  if (!locked) {
+    // Clear input so user always pastes fresh
+    const inp = document.getElementById('apiKeyInp');
+    if (inp) inp.value = '';
+    inp && inp.focus();
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+
+// ── PIN unlock ──
+function unlockPin() {
+  const v = (document.getElementById('pinInp')?.value || '').trim();
+  const correctPin = localStorage.getItem('jarvisOwnerPin') || '1234';
+  if (v === correctPin) {
+    _unlocked = true;
+    _setLock(false);
+    if (document.getElementById('pinInp')) document.getElementById('pinInp').value = '';
+    if (document.getElementById('pinErr')) document.getElementById('pinErr').textContent = '';
+    toast('🔓 OWNER ACCESS');
+  } else {
+    const pe = document.getElementById('pinErr');
+    if (pe) pe.textContent = '✗ Wrong PIN';
+    if (document.getElementById('pinInp')) document.getElementById('pinInp').value = '';
+  }
+}
+// Enter key on PIN input
+setTimeout(() => {
+  const pi = document.getElementById('pinInp');
+  if (pi) pi.addEventListener('keydown', e => { if (e.key === 'Enter') unlockPin(); });
+}, 1000);
+
+// ── Save API key ──
 function saveApiKey() {
-  const v = document.getElementById('apiKeyInp').value.trim();
-  if (!v) { _st('⚠ Paste your key first','#f39c12'); return; }
-  if (v.startsWith('•')) { _st('⚠ Paste a NEW key — do not use the masked dots','#f39c12'); return; }
-  if (!v.startsWith('gsk_')) { _st('⚠ Wrong key — Groq keys must start with gsk_','#f39c12'); return; }
-  if (v.length < 40) { _st('⚠ Key too short — copy the full key from console.groq.com','#f39c12'); return; }
+  const v = (document.getElementById('apiKeyInp')?.value || '').trim();
+  if (!v)                   { _st('⚠ Paste your key into the box first', '#f39c12'); return; }
+  if (!v.startsWith('gsk_')){ _st('⚠ Groq keys start with  gsk_  — copy the full key', '#f39c12'); return; }
+  if (v.length < 40)        { _st('⚠ Key too short — copy the complete key from console.groq.com', '#f39c12'); return; }
   localStorage.setItem('jarvisApiKey', v);
-  _st('✓ Key saved! Click TEST to verify it works.', '#2ecc71');
-  document.getElementById('apiKeyInp').value = v.slice(0,8) + '••••••••••••••••' + v.slice(-4);
-  document.getElementById('noKeyWarn').style.display = 'none';
+  _st('✓ Key saved! Press TEST to verify.', '#2ecc71');
+  document.getElementById('apiKeyInp').value = '';
+  const keySt = document.getElementById('keySavedSt');
+  if (keySt) { keySt.textContent = '✓ API key is saved'; keySt.style.color = '#2ecc71'; }
+  const nkw = document.getElementById('noKeyWarn');
+  if (nkw) nkw.style.display = 'none';
+  const lw = document.getElementById('localWarn');
+  // Keep localWarn if still on file://
   toast('✓ API KEY SAVED');
 }
+
+// ── Test API key ──
 async function testKey() {
   const key = localStorage.getItem('jarvisApiKey');
-  if (!key) { _st('⚠ Save a key first then test','#f39c12'); return; }
-  _st('⏳ Testing...','#888');
+  if (!key) { _st('⚠ Save a key first, then test', '#f39c12'); return; }
+  _st('⏳ Testing...', '#888');
   try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body: JSON.stringify({model:'llama-3.1-8b-instant',messages:[{role:'user',content:'Say OK'}],max_tokens:5})
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 5 })
     });
-    const d = await r.json();
+    const d = await res.json();
     if (d.error) {
-      if (d.error.code === 'invalid_api_key' || d.error.status === 401) {
-        _st('✗ Invalid key — go to console.groq.com → API Keys → create new key','#e74c3c');
+      if (d.error.code === 'invalid_api_key') {
+        _st('✗ Invalid key — get a fresh one from console.groq.com', '#e74c3c');
       } else {
-        _st('✗ Groq error: ' + d.error.message,'#e74c3c');
+        _st('✗ ' + d.error.message, '#e74c3c');
       }
     } else {
-      _st('✓ Connected! JARVIS is ready, sir.','#2ecc71');
-      toast('✓ GROQ CONNECTED — JARVIS READY');
+      _st('✓ Connected! JARVIS is ready, sir.', '#2ecc71');
+      toast('✓ GROQ CONNECTED');
     }
   } catch(e) {
-    if (e.message.includes('fetch') || e.message.includes('Failed') || e.message.includes('Network')) {
-      _st('✗ CORS blocked — you must upload to Vercel to use API from local file','#e74c3c');
-      toast('⚠ Upload to Vercel — local files cannot call APIs');
+    if (location.protocol === 'file:') {
+      _st('✗ Local file blocked — upload to Vercel then test', '#e74c3c');
     } else {
-      _st('✗ Error: ' + e.message,'#e74c3c');
+      _st('✗ Network error: ' + e.message, '#e74c3c');
     }
   }
 }
-function _st(m,c){const e=document.getElementById('apiSt');if(e){e.textContent=m;e.style.color=c;}}
 
-// ── PIN UNLOCK ──
-function unlockPin() {
-  const v = document.getElementById('pinInp').value.trim();
-  if (v === OWNER_PIN) {
-    _pinUnlocked = true;
-    document.getElementById('apiLocked').style.display = 'none';
-    document.getElementById('apiUnlocked').style.display = 'block';
-    document.getElementById('apiKeyInp').value = '';
-    document.getElementById('pinInp').value = '';
-    document.getElementById('pinErr').textContent = '';
-    toast('🔓 OWNER ACCESS GRANTED');
-  } else {
-    document.getElementById('pinErr').textContent = '✗ Wrong PIN';
-    document.getElementById('pinInp').value = '';
-  }
+function _st(msg, color) {
+  const el = document.getElementById('apiSt');
+  if (el) { el.textContent = msg; el.style.color = color || '#f39c12'; }
 }
 
-// ── VOICE TOGGLE ──
+// ── Save model ──
+function saveModel() {
+  const v = document.getElementById('modelSel')?.value;
+  if (v) { localStorage.setItem('jarvisModel', v); _st('✓ Model saved', '#2ecc71'); toast('MODEL: ' + v); }
+}
+
+// ── Voice toggle ──
 function toggleVoiceResp() {
   voiceRespOn = !voiceRespOn;
   localStorage.setItem('jarvisVoiceResp', voiceRespOn);
-  _updateVRToggle();
+  _syncVoiceToggle();
+  toast(voiceRespOn ? '🔊 VOICE ON' : '🔇 VOICE OFF');
 }
-function _updateVRToggle() {
-  const t = document.getElementById('vrToggle');
+function _syncVoiceToggle() {
+  const t  = document.getElementById('vrToggle');
   const th = document.getElementById('vrThumb');
-  if (t) t.style.background = voiceRespOn ? '#c0392b' : '#444';
-  if (th) th.style.left = voiceRespOn ? '22px' : '3px';
+  if (t)  t.style.background = voiceRespOn ? '#c0392b' : '#444';
+  if (th) th.style.left       = voiceRespOn ? '22px'   : '3px';
 }
 
-// ── MODEL ──
-function saveModel() {
-  const v = document.getElementById('modelSel').value;
-  if (v) { localStorage.setItem('jarvisModel', v); _st('✓ Model saved','#2ecc71'); }
-}
-
-// ── CLEAR HISTORY ──
+// ── Clear history ──
 function clearHistory() {
-  if (!confirm('Clear all chat history?')) return;
+  if (!confirm('Clear all JARVIS chat history?')) return;
   chatHist = []; history = [];
   localStorage.removeItem('jarvisChatHist');
-  ['mChatView','dChatView'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML='';});
-  if(typeof renderHistPanel==='function')renderHistPanel();
-  closeSettings(); toast('🗑 HISTORY CLEARED');
+  ['mChatView','dChatView'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
+  if (typeof renderHistPanel === 'function') renderHistPanel();
+  closeSettings();
+  toast('🗑 HISTORY CLEARED');
 }
 
-// ── ESC closes settings ──
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeSettings(); });
+// ═══════════════════════════════════════════
+//  IMAGE GENERATION  (Pollinations AI)
+// ═══════════════════════════════════════════
+async function generateImage(prompt, layout) {
+  if (!layout) layout = window.innerWidth >= 768 ? 'd' : 'm';
+  const prefix    = layout === 'd' ? 'd' : 'm';
+  const container = document.getElementById(prefix + 'ChatView');
+  if (!container) return;
 
-// ── Detect local file + warn if no key ──
-setTimeout(() => {
-  const isLocal = location.protocol === 'file:';
-  if (isLocal) {
-    document.getElementById('localWarn').style.display = 'block';
-  }
-  if (!localStorage.getItem('jarvisApiKey')) {
-    document.getElementById('noKeyWarn').style.display = 'block';
-    toast('⚠ Open Settings ⚙ and add your Groq API key');
-    setTimeout(openSettings, 2000);
-  }
-}, 2000);
+  addChat('🎨 Generate: ' + prompt, 'user', layout);
 
-// ── Safe stubs ──
+  const uid    = 'ig' + Date.now();
+  const bblCls = prefix === 'd' ? 'd-bbl' : 'm-bbl';
+  const avCls  = prefix === 'd' ? 'd-av'  : 'm-av';
+
+  // Animated loading bubble
+  const div = document.createElement('div');
+  div.className = (prefix === 'd' ? 'd-cmsg ' : 'm-cmsg ') + 'j';
+  div.innerHTML = `
+    <div class="${avCls}">AI</div>
+    <div class="${bblCls}" id="${uid}">
+      <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:#4488ff;margin-bottom:10px">🎨 GENERATING IMAGE</div>
+      <div style="display:flex;align-items:center;gap:14px;padding:12px;background:rgba(0,0,20,.5);border:1px solid rgba(68,136,255,.25);border-radius:3px">
+        <div style="width:52px;height:52px;flex-shrink:0;position:relative">
+          <div style="position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:#c0392b;border-right-color:#c0392b;animation:igSpin 1s linear infinite"></div>
+          <div style="position:absolute;inset:8px;border-radius:50%;border:2px solid transparent;border-top-color:#f39c12;border-left-color:#f39c12;animation:igSpin .65s linear infinite reverse"></div>
+          <div style="position:absolute;inset:16px;border-radius:50%;border:2px solid transparent;border-top-color:#4488ff;animation:igSpin 1.4s linear infinite"></div>
+          <div style="position:absolute;inset:22px;border-radius:50%;background:radial-gradient(#88aaff,#224);animation:igPulse 1s ease-in-out infinite"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:rgba(255,255,255,.5);font-style:italic;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${prompt.slice(0,50)}${prompt.length>50?'...':''}"</div>
+          <div id="${uid}st" style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;color:#f39c12">PROCESSING PROMPT...</div>
+        </div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  setStatus('GENERATING', '#4488ff');
+
+  // Step label animation
+  const steps = ['PROCESSING PROMPT...','NEURAL RENDERING...','APPLYING STYLE...','FINALIZING...'];
+  steps.forEach((s,i) => setTimeout(() => { const e=document.getElementById(uid+'st'); if(e) e.textContent=s; }, i*5000));
+
+  const enc  = encodeURIComponent(prompt + ', high quality, cinematic, detailed, digital art, 4k');
+  const enc2 = encodeURIComponent(prompt);
+  const seed = Math.floor(Math.random() * 999999);
+  const url1 = `https://image.pollinations.ai/prompt/${enc}?width=768&height=768&seed=${seed}&nologo=true&model=flux`;
+  const url2 = `https://image.pollinations.ai/prompt/${enc2}?width=512&height=512&seed=${seed}&nologo=true`;
+  const safeP = prompt.replace(/\\/g,'').replace(/'/g, "\\'");
+
+  // After 1s swap loading → actual img tag (browser loads it)
+  setTimeout(() => {
+    const bbl = document.getElementById(uid);
+    if (!bbl) return;
+    bbl.innerHTML = `
+      <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:#4488ff;margin-bottom:6px">🎨 RENDERED · ${new Date().toLocaleTimeString()}</div>
+      <img src="${url1}"
+        style="max-width:100%;width:100%;border-radius:4px;border:1px solid rgba(68,136,255,.4);display:block;min-height:80px;background:rgba(0,0,20,.4)"
+        onerror="this.src='${url2}';this.onerror=function(){
+          this.style.display='none';
+          document.getElementById('${uid}err').style.display='block';
+        }">
+      <div id="${uid}err" style="display:none;color:#e74c3c;font-size:11px;padding:10px">
+        ⚠ Image server busy.
+        <button onclick="generateImage('${safeP}','${layout}')"
+          style="background:rgba(192,57,43,.2);border:1px solid #c0392b;color:#c0392b;padding:4px 10px;cursor:pointer;font-family:'Orbitron',monospace;font-size:9px;margin-left:8px">RETRY</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <a href="${url1}" target="_blank" download="jarvis-art.png">
+          <button style="background:rgba(68,136,255,.12);border:1px solid rgba(68,136,255,.4);color:#4488ff;font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer">⬇ SAVE</button>
+        </a>
+        <button onclick="generateImage('${safeP}','${layout}')"
+          style="background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.4);color:#c0392b;font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer">🔄 REDO</button>
+      </div>`;
+    container.scrollTop = container.scrollHeight;
+    setStatus('STANDBY', '#f39c12');
+    try { playSound('done'); speakOut('Image ready, sir.'); } catch(e) {}
+  }, 900);
+}
+
+// ═══════════════════════════════════════════
+//  SAFE STUBS (if canvas/sound not loaded)
+// ═══════════════════════════════════════════
 function spawnParticles(){}
 function stopParticles(){}
 function generateSuggestions(){}
+
+// ═══════════════════════════════════════════
+//  STARTUP CHECKS
+// ═══════════════════════════════════════════
+setTimeout(() => {
+  // Show local file warning
+  if (location.protocol === 'file:') {
+    const lw = document.getElementById('localWarn');
+    if (lw) lw.style.display = 'block';
+  }
+  // Show no-key warning
+  if (!localStorage.getItem('jarvisApiKey')) {
+    const nkw = document.getElementById('noKeyWarn');
+    if (nkw) nkw.style.display = 'block';
+    toast('⚠ Open Settings ⚙ — add your Groq API key');
+    setTimeout(openSettings, 2000);
+  }
+}, 2000);
 </script>
 
   <!-- AI MODEL -->
@@ -1384,80 +1516,146 @@ function generateSuggestions(){}
 </div>
 
 
+
+
+<!-- local file warning -->
+<div id="localWarn" onclick="window.open('https://vercel.com','_blank')"
+  style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#7a0000;
+  padding:7px 12px;text-align:center;cursor:pointer;border-bottom:1px solid #c0392b">
+  <span style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:1px;color:#fff">
+    ⚠ LOCAL FILE — API BLOCKED. Upload to <u>Vercel.com</u> (free) to use JARVIS. Click →
+  </span>
+</div>
+
 <!-- SETTINGS PANEL -->
-<div id="settOverlay" onclick="if(event.target===this)closeSettings()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(8px)">
-  <div style="background:linear-gradient(160deg,#0c0200,#180600);border:1px solid rgba(192,57,43,.55);width:92%;max-width:400px;max-height:85vh;overflow-y:auto;position:relative">
-    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c0392b,#f39c12,#c0392b,transparent)"></div>
+<div id="settOverlay" onclick="if(event.target===this)closeSettings()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);z-index:99999;
+  align-items:center;justify-content:center;backdrop-filter:blur(8px)">
+  <div style="background:linear-gradient(160deg,#0c0200,#1a0500);border:1px solid rgba(192,57,43,.5);
+    width:92%;max-width:390px;max-height:88vh;overflow-y:auto;position:relative;
+    box-shadow:0 0 40px rgba(192,57,43,.25)">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;
+      background:linear-gradient(90deg,transparent,#c0392b,#f39c12,#c0392b,transparent)"></div>
+
     <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid rgba(192,57,43,.25)">
-      <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:#f39c12">⚙ JARVIS SETTINGS</span>
-      <button onclick="closeSettings()" style="background:none;border:1px solid rgba(192,57,43,.4);color:#c0392b;width:24px;height:24px;cursor:pointer;font-size:12px">✕</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:13px 16px 11px;border-bottom:1px solid rgba(192,57,43,.2)">
+      <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:#f39c12">
+        ⚙ JARVIS SETTINGS
+      </span>
+      <button onclick="closeSettings()"
+        style="background:none;border:1px solid rgba(192,57,43,.4);color:#c0392b;
+        width:24px;height:24px;cursor:pointer;font-size:12px;line-height:1">✕</button>
     </div>
-    <!-- No-key warning -->
-    <div id="noKeyWarn" style="display:none;background:rgba(192,57,43,.15);border-bottom:1px solid rgba(192,57,43,.3);padding:8px 16px;font-family:'Orbitron',monospace;font-size:9px;color:#e74c3c;letter-spacing:1px">
-      ⚠ NO API KEY — JARVIS CANNOT RESPOND WITHOUT IT
-    </div>
+
     <div style="padding:16px">
 
-      <!-- API KEY — LOCKED by default -->
+      <!-- No-key warning -->
+      <div id="noKeyWarn" style="display:none;margin-bottom:12px;padding:8px 10px;
+        background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);
+        font-family:'Orbitron',monospace;font-size:9px;color:#e74c3c;letter-spacing:1px">
+        ⚠ NO API KEY — JARVIS CANNOT RESPOND
+      </div>
+
+      <!-- ── API KEY section ── -->
       <div style="margin-bottom:16px">
-        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#f39c12;margin-bottom:8px">◆ API KEY <span style="color:rgba(255,255,255,.3);font-size:7px">(Groq — 14,400 free/day)</span></div>
-
-        <!-- LOCKED STATE -->
-        <div id="apiLocked" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(192,57,43,.25)">
-          <span style="font-size:16px">🔒</span>
-          <div style="flex:1">
-            <div style="font-size:10px;color:rgba(255,255,255,.7)">API key is protected</div>
-            <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:1px">Enter owner PIN to modify</div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input id="pinInp" type="password" maxlength="6" placeholder="PIN"
-              style="width:52px;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.4);color:#fff;padding:5px 6px;font-family:'Share Tech Mono',monospace;font-size:12px;text-align:center;outline:none"
-              onkeydown="if(event.key==='Enter')unlockPin()">
-            <button onclick="unlockPin()" style="background:rgba(243,156,18,.15);border:1px solid rgba(243,156,18,.5);color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;padding:5px 8px;cursor:pointer;letter-spacing:1px">UNLOCK</button>
-          </div>
+        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;
+          color:#f39c12;margin-bottom:8px">◆ API KEY
+          <span style="color:rgba(255,255,255,.25);font-size:7px;margin-left:4px">Groq — 14,400 free/day</span>
         </div>
-        <div id="pinErr" style="font-size:10px;color:#e74c3c;margin-top:3px;font-family:'Orbitron',monospace;min-height:14px"></div>
 
-        <!-- UNLOCKED STATE -->
+        <!-- Key status line -->
+        <div id="keySavedSt" style="font-size:10px;font-family:'Share Tech Mono',monospace;
+          margin-bottom:8px;color:#888">Checking...</div>
+
+        <!-- LOCKED row -->
+        <div id="apiLocked" style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+          background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)">
+          <span style="font-size:15px">🔒</span>
+          <div style="flex:1;font-size:10px;color:rgba(255,255,255,.5)">Protected — enter owner PIN</div>
+          <input id="pinInp" type="password" maxlength="6" placeholder="PIN"
+            style="width:50px;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.4);
+            color:#fff;padding:5px 6px;font-family:'Share Tech Mono',monospace;font-size:12px;
+            text-align:center;outline:none">
+          <button onclick="unlockPin()"
+            style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.45);
+            color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;
+            padding:5px 9px;cursor:pointer;letter-spacing:1px">UNLOCK</button>
+        </div>
+        <div id="pinErr" style="font-size:10px;color:#e74c3c;min-height:14px;margin-top:3px;
+          font-family:'Orbitron',monospace"></div>
+
+        <!-- UNLOCKED row -->
         <div id="apiUnlocked" style="display:none">
-          <div style="font-size:9px;color:#2ecc71;font-family:'Orbitron',monospace;margin-bottom:6px">🔓 OWNER ACCESS</div>
-          <input id="apiKeyInp" type="password" placeholder="gsk_... from console.groq.com"
-            style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.4);color:#fff;padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;margin-bottom:6px">
+          <div style="font-size:9px;color:#2ecc71;font-family:'Orbitron',monospace;
+            margin-bottom:6px;letter-spacing:1px">🔓 OWNER ACCESS — paste new key below</div>
+          <input id="apiKeyInp" type="text" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx..."
+            style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.45);
+            border:1px solid rgba(192,57,43,.4);color:#fff;padding:9px 10px;
+            font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;margin-bottom:7px"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <div style="display:flex;gap:6px">
-            <button onclick="saveApiKey()" style="flex:1;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.5);color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;padding:7px;cursor:pointer;letter-spacing:1px">SAVE</button>
-            <button onclick="testKey()" style="flex:1;background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.5);color:#c0392b;font-family:'Orbitron',monospace;font-size:8px;padding:7px;cursor:pointer;letter-spacing:1px">TEST</button>
+            <button onclick="saveApiKey()"
+              style="flex:1;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.5);
+              color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;
+              padding:8px;cursor:pointer;letter-spacing:1px">SAVE KEY</button>
+            <button onclick="testKey()"
+              style="flex:1;background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.5);
+              color:#c0392b;font-family:'Orbitron',monospace;font-size:8px;
+              padding:8px;cursor:pointer;letter-spacing:1px">TEST</button>
           </div>
         </div>
-        <div id="apiSt" style="font-size:10px;font-family:'Share Tech Mono',monospace;min-height:14px;margin-top:4px"></div>
-        <div style="font-size:9px;color:rgba(255,255,255,.25);margin-top:4px;font-family:'Share Tech Mono',monospace">
-          <a href="https://console.groq.com" target="_blank" style="color:#f39c12;text-decoration:none">console.groq.com</a> — free, no credit card
+        <div id="apiSt" style="font-size:10px;font-family:'Share Tech Mono',monospace;
+          min-height:15px;margin-top:5px"></div>
+        <div style="font-size:9px;color:rgba(255,255,255,.22);margin-top:5px;
+          font-family:'Share Tech Mono',monospace">
+          Get free key →
+          <a href="https://console.groq.com" target="_blank"
+            style="color:#f39c12;text-decoration:none">console.groq.com</a>
         </div>
       </div>
 
-      <!-- MODEL -->
+      <!-- ── AI MODEL ── -->
       <div style="margin-bottom:16px">
-        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#f39c12;margin-bottom:8px">◆ AI MODEL</div>
-        <select id="modelSel" onchange="saveModel()" style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.35);color:#fff;padding:7px 8px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none">
-          <option value="llama-3.3-70b-versatile">Llama 3.3 70B — Best (Recommended)</option>
+        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;
+          color:#f39c12;margin-bottom:8px">◆ AI MODEL</div>
+        <select id="modelSel" onchange="saveModel()"
+          style="width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.3);
+          color:#fff;padding:8px;font-family:'Share Tech Mono',monospace;font-size:11px;outline:none">
+          <option value="llama-3.3-70b-versatile">Llama 3.3 70B — Best ⚡ (Recommended)</option>
           <option value="llama-3.1-8b-instant">Llama 3.1 8B — Fastest</option>
           <option value="mixtral-8x7b-32768">Mixtral 8x7B — Creative</option>
+          <option value="gemma2-9b-it">Gemma 2 9B</option>
         </select>
       </div>
 
-      <!-- VOICE + CLEAR -->
+      <!-- ── FEATURES ── -->
       <div style="margin-bottom:16px">
-        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:#f39c12;margin-bottom:8px">◆ FEATURES</div>
+        <div style="font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;
+          color:#f39c12;margin-bottom:10px">◆ FEATURES</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <span style="font-size:11px;color:rgba(255,255,255,.7)">Voice Response</span>
-          <div id="vrToggle" onclick="toggleVoiceResp()" style="width:42px;height:22px;border-radius:11px;cursor:pointer;position:relative;background:#c0392b;transition:background .2s">
-            <div id="vrThumb" style="position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:22px;transition:left .2s"></div>
+          <span style="font-size:11px;color:rgba(255,255,255,.75)">Voice Response</span>
+          <div id="vrToggle" onclick="toggleVoiceResp()"
+            style="width:42px;height:22px;border-radius:11px;cursor:pointer;position:relative;
+            background:#c0392b;transition:background .2s">
+            <div id="vrThumb"
+              style="position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;
+              top:3px;left:22px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>
           </div>
         </div>
-        <button onclick="clearHistory()" style="width:100%;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.35);color:#c0392b;font-family:'Orbitron',monospace;font-size:8px;padding:7px;cursor:pointer;letter-spacing:1px">🗑 CLEAR CHAT HISTORY</button>
+        <button onclick="clearHistory()"
+          style="width:100%;background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.3);
+          color:rgba(192,57,43,.8);font-family:'Orbitron',monospace;font-size:8px;
+          padding:7px;cursor:pointer;letter-spacing:1px;transition:all .2s"
+          onmouseover="this.style.background='rgba(192,57,43,.2)'"
+          onmouseout="this.style.background='rgba(192,57,43,.08)'">
+          🗑 CLEAR CHAT HISTORY
+        </button>
       </div>
 
-      <div style="border-top:1px solid rgba(192,57,43,.2);padding-top:10px;font-size:9px;color:rgba(255,255,255,.2);font-family:'Share Tech Mono',monospace;text-align:center">
+      <!-- footer -->
+      <div style="border-top:1px solid rgba(192,57,43,.15);padding-top:10px;text-align:center;
+        font-size:9px;color:rgba(255,255,255,.18);font-family:'Share Tech Mono',monospace">
         J.A.R.V.I.S · Groq + Llama 3.3 · Default PIN: 1234
       </div>
     </div>
