@@ -1218,20 +1218,32 @@ setTimeout(() => {
 
 // ── Save API key ──
 function saveApiKey() {
-  const v = (document.getElementById('apiKeyInp')?.value || '').trim();
-  if (!v)                   { _st('⚠ Paste your key into the box first', '#f39c12'); return; }
-  if (!v.startsWith('gsk_')){ _st('⚠ Groq keys start with  gsk_  — copy the full key', '#f39c12'); return; }
-  if (v.length < 40)        { _st('⚠ Key too short — copy the complete key from console.groq.com', '#f39c12'); return; }
+  const inp = document.getElementById('apiKeyInp');
+  const v = (inp?.value || '').trim();
+  const existing = localStorage.getItem('jarvisApiKey') || '';
+
+  // If blank but we already have a saved key, just confirm it
+  if (!v && existing) {
+    _st('✓ Key already saved. Click TEST to verify.', '#2ecc71');
+    return;
+  }
+  if (!v) { _st('⚠ Paste your gsk_... key into the box first', '#f39c12'); return; }
+  if (!v.startsWith('gsk_')) { _st('⚠ Wrong format — Groq keys start with gsk_', '#f39c12'); return; }
+  if (v.length < 40) { _st('⚠ Key too short — copy the full key from console.groq.com', '#f39c12'); return; }
+
   localStorage.setItem('jarvisApiKey', v);
-  _st('✓ Key saved! Press TEST to verify.', '#2ecc71');
-  document.getElementById('apiKeyInp').value = '';
+  if (inp) inp.value = '';
+  _st('✓ Key saved! Click TEST to verify it works.', '#2ecc71');
   const keySt = document.getElementById('keySavedSt');
   if (keySt) { keySt.textContent = '✓ API key is saved'; keySt.style.color = '#2ecc71'; }
   const nkw = document.getElementById('noKeyWarn');
   if (nkw) nkw.style.display = 'none';
-  const lw = document.getElementById('localWarn');
-  // Keep localWarn if still on file://
   toast('✓ API KEY SAVED');
+  // Auto-lock after saving
+  setTimeout(() => {
+    _unlocked = false;
+    _setLock(true);
+  }, 800);
 }
 
 // ── Test API key ──
@@ -1569,18 +1581,26 @@ setTimeout(() => {
           margin-bottom:8px;color:#888">Checking...</div>
 
         <!-- LOCKED row -->
-        <div id="apiLocked" style="display:flex;align-items:center;gap:8px;padding:8px 10px;
+        <div id="apiLocked" style="display:flex;flex-direction:column;gap:8px;padding:8px 10px;
           background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)">
-          <span style="font-size:15px">🔒</span>
-          <div style="flex:1;font-size:10px;color:rgba(255,255,255,.5)">Protected — enter owner PIN</div>
-          <input id="pinInp" type="password" maxlength="6" placeholder="PIN"
-            style="width:50px;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.4);
-            color:#fff;padding:5px 6px;font-family:'Share Tech Mono',monospace;font-size:12px;
-            text-align:center;outline:none">
-          <button onclick="unlockPin()"
-            style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.45);
-            color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;
-            padding:5px 9px;cursor:pointer;letter-spacing:1px">UNLOCK</button>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:15px">🔒</span>
+            <div style="flex:1;font-size:10px;color:rgba(255,255,255,.5)">Protected — enter owner PIN to change</div>
+            <button onclick="testKey()"
+              style="background:rgba(68,136,255,.12);border:1px solid rgba(68,136,255,.4);
+              color:#4488ff;font-family:'Orbitron',monospace;font-size:8px;
+              padding:5px 9px;cursor:pointer;letter-spacing:1px">TEST ✓</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input id="pinInp" type="password" maxlength="6" placeholder="Enter PIN to change key"
+              style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.4);
+              color:#fff;padding:6px 8px;font-family:'Share Tech Mono',monospace;font-size:11px;
+              outline:none">
+            <button onclick="unlockPin()"
+              style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.45);
+              color:#f39c12;font-family:'Orbitron',monospace;font-size:8px;
+              padding:6px 10px;cursor:pointer;letter-spacing:1px">UNLOCK</button>
+          </div>
         </div>
         <div id="pinErr" style="font-size:10px;color:#e74c3c;min-height:14px;margin-top:3px;
           font-family:'Orbitron',monospace"></div>
@@ -1589,7 +1609,7 @@ setTimeout(() => {
         <div id="apiUnlocked" style="display:none">
           <div style="font-size:9px;color:#2ecc71;font-family:'Orbitron',monospace;
             margin-bottom:6px;letter-spacing:1px">🔓 OWNER ACCESS — paste new key below</div>
-          <input id="apiKeyInp" type="text" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx..."
+          <input id="apiKeyInp" type="password" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx..."
             style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.45);
             border:1px solid rgba(192,57,43,.4);color:#fff;padding:9px 10px;
             font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;margin-bottom:7px"
@@ -1664,3 +1684,4 @@ setTimeout(() => {
 
 </body>
 </html>
+
