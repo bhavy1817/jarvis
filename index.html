@@ -741,6 +741,9 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -1860,7 +1863,8 @@ function initLogin() {
     const u = JSON.parse(localStorage.getItem('jUser')||'null');
     if (u) { currentUser=u; _launchApp(); return; }
   } catch(e){}
-  document.getElementById('loginOv').style.display = 'flex';
+  const lov = document.getElementById('loginOv');
+  if (lov) lov.style.display = 'flex';
 }
 function showLTab(tab) {
   ['login','signup'].forEach(t => {
@@ -1873,39 +1877,43 @@ function showLTab(tab) {
 function _lSt(id,msg,c){ const e=document.getElementById(id); if(e){e.textContent=msg;e.style.color=c||'#f39c12';} }
 function doGuest(){ currentUser={name:'GUEST',role:'guest'}; _launchApp(); }
 function doLogin() {
-  let   c=(document.getElementById('lContact')?.value||'').trim();
-  const p=(document.getElementById('lPass')?.value||'').trim();
-  if(_contactMode==='phone'){ const n=normalisePhone(c); if(n) c=n; }
-  if(!c){_lSt('lStLogin','⚠ Enter '+(_contactMode==='email'?'email':'phone number'),'#e74c3c');return;}
-  if(!p){_lSt('lStLogin','⚠ Enter password','#e74c3c');return;}
+  const raw = (document.getElementById('lContact')?.value||'').trim();
+  const p   = (document.getElementById('lPass')?.value||'').trim();
+  if(!raw){_lSt('lStLogin','⚠ Enter email or phone number','#e74c3c');return;}
+  if(!p)  {_lSt('lStLogin','⚠ Enter password','#e74c3c');return;}
+  // Auto-detect and normalise
+  const c = normaliseContact(raw);
+  if(!c){_lSt('lStLogin','⚠ Invalid phone number — enter 10 digits','#e74c3c');return;}
   try {
     const users = JSON.parse(localStorage.getItem('jUsers')||'[]');
-    const u = users.find(x=>x.contact===c && x.pass===p);
+    // Try exact match first, then normalised phone match
+    let u = users.find(x=>x.contact===c && x.pass===p);
+    if(!u && isPhone(raw)){
+      // Try matching without +91 prefix in case stored differently
+      const bare = c.replace('+91','');
+      u = users.find(x=>(x.contact===bare||x.contact==='+91'+bare) && x.pass===p);
+    }
     if (u) {
       currentUser = {name:u.name, contact:u.contact, role:'user'};
       localStorage.setItem('jUser', JSON.stringify(currentUser));
       _launchApp();
-    } else { _lSt('lStLogin','✗ Wrong credentials — sign up first','#e74c3c'); }
+    } else { _lSt('lStLogin','✗ Account not found — please sign up first','#e74c3c'); }
   } catch(e){ _lSt('lStLogin','✗ '+e.message,'#e74c3c'); }
 }
 function doSignup() {
   const name=(document.getElementById('sName')?.value||'').trim();
-  let   c=(document.getElementById('sContact')?.value||'').trim();
-  const p=(document.getElementById('sPass')?.value||'').trim();
+  const raw =(document.getElementById('sContact')?.value||'').trim();
+  const p   =(document.getElementById('sPass')?.value||'').trim();
   if(!name){_lSt('lStSignup','⚠ Enter your name','#e74c3c');return;}
-  if(!c){_lSt('lStSignup','⚠ Enter '+(_contactMode==='email'?'your email':'phone number'),'#e74c3c');return;}
-  if (_contactMode === 'phone') {
-    c = normalisePhone(c);
-    if (!c){_lSt('lStSignup','⚠ Enter valid 10-digit phone number','#e74c3c');return;}
-    const inp=document.getElementById('sContact'); if(inp) inp.value=c;
-  } else {
-    if (!c.includes('@')||!c.includes('.')){_lSt('lStSignup','⚠ Enter a valid email address','#e74c3c');return;}
-  }
-  if(p.length<6){_lSt('lStSignup','⚠ Min 6 char password','#e74c3c');return;}
+  if(!raw) {_lSt('lStSignup','⚠ Enter email or phone number','#e74c3c');return;}
+  // Auto-detect email or phone
+  const c = normaliseContact(raw);
+  if(!c){_lSt('lStSignup','⚠ Invalid — enter a valid email or 10-digit phone number','#e74c3c');return;}
+  if(c.includes('@') && !c.includes('.')){_lSt('lStSignup','⚠ Enter a valid email address','#e74c3c');return;}
+  if(p.length<6){_lSt('lStSignup','⚠ Password must be at least 6 characters','#e74c3c');return;}
   try{
     const users=JSON.parse(localStorage.getItem('jUsers')||'[]');
-    if(users.find(x=>x.contact===c)){_lSt('lStSignup','✗ Account exists — login instead','#e74c3c');return;}
-    // Direct registration — no OTP required
+    if(users.find(x=>x.contact===c)){_lSt('lStSignup','✗ Account already exists — login instead','#e74c3c');return;}
     users.push({name, contact:c, pass:p});
     localStorage.setItem('jUsers', JSON.stringify(users));
   }catch(e){ _lSt('lStSignup','✗ Error: '+e.message,'#e74c3c'); return; }
@@ -2173,6 +2181,19 @@ function normalisePhone(val) {
   if (digits.length !== 10) return null;
   return '+91' + digits;
 }
+
+// Auto-detect and normalise contact (email or phone)
+function normaliseContact(raw) {
+  const v = (raw||'').trim();
+  if (!v) return null;
+  // If it contains @ it's an email
+  if (v.includes('@')) return v.toLowerCase();
+  // Otherwise treat as phone
+  const n = normalisePhone(v);
+  return n; // null if invalid phone
+}
+function isPhone(v) { return v && !v.includes('@'); }
+
 function formatPhone(inp) {
   const val = inp.value;
   // If it looks like a phone (no @), enforce 10 digit max + auto +91
@@ -2333,21 +2354,34 @@ function rehearMsg(mid) {
   if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
   if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
 })();
-loadTheme();
-syncWebSearch();
-initLogin(); // Show login screen — boots JARVIS after successful auth
+// ── DOM READY INIT ──
+function _domInit() {
+  loadTheme();
+  syncWebSearch();
+  // Pre-set OTP service keys
+  if(!localStorage.getItem('jEJService'))  localStorage.setItem('jEJService',  'service_s6df9u9');
+  if(!localStorage.getItem('jEJTemplate')) localStorage.setItem('jEJTemplate', 'template_wxoai9w');
+  if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
+  if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
+  initLogin();
+  window.addEventListener('resize', () => {
+    const mApp = document.getElementById('mApp');
+    const dApp = document.getElementById('dApp');
+    if (!mApp || !dApp) return;
+    if (dApp.style.display === 'none' && mApp.style.display === 'none') return;
+    const isDesktop = window.innerWidth >= 768;
+    dApp.style.display = isDesktop ? 'grid' : 'none';
+    mApp.style.display = isDesktop ? 'none' : 'flex';
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _domInit);
+} else {
+  _domInit();
+}
 
-// Handle window resize — switch between desktop/mobile layouts
-window.addEventListener('resize', () => {
-  const mApp = document.getElementById('mApp');
-  const dApp = document.getElementById('dApp');
-  if (!mApp || !dApp) return;
-  // Only do this if app is actually visible
-  if (dApp.style.display === 'none' && mApp.style.display === 'none') return;
-  const isDesktop = window.innerWidth >= 768;
-  dApp.style.display = isDesktop ? 'grid' : 'none';
-  mApp.style.display = isDesktop ? 'none' : 'flex';
-});
+
+
 
 
 
@@ -2358,61 +2392,62 @@ window.addEventListener('resize', () => {
 </script>
 
 <!-- ══════════ LOGIN / SIGNUP ══════════ -->
-<div id="loginOv">
-  <div class="login-box">
-    <div class="login-tl"></div>
-    <div class="login-logo">
-      <svg width="50" height="54" viewBox="0 0 48 52" fill="none">
+<div id="loginOv" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+  <div style="width:min(90vw,340px);background:rgba(10,10,10,.95);border:1px solid rgba(192,57,43,.4);border-radius:4px;padding:28px 24px;font-family:'Orbitron',monospace">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:20px">
+      <svg width="44" height="48" viewBox="0 0 48 52" fill="none" style="margin-bottom:8px">
         <path d="M4 20C4 10 10 4 24 4C38 4 44 10 44 20L44 36C44 44 38 48 24 48C10 48 4 44 4 36Z" fill="#8b0000" stroke="#c0392b" stroke-width="1.2"/>
-        <path d="M8 22L16 19L16 28L8 30Z" fill="#ffd700"/><path d="M40 22L32 19L32 28L40 30Z" fill="#ffd700"/>
-        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".8"/>
+        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".9"/>
       </svg>
-      <div class="login-title">J.A.R.V.I.S</div>
-      <div class="login-sub">STARK INDUSTRIES · SECURE ACCESS</div>
+      <div style="font-size:13px;letter-spacing:4px;color:var(--g1)">J.A.R.V.I.S</div>
+      <div style="font-size:8px;color:var(--dim);letter-spacing:2px;margin-top:3px">STARK INDUSTRIES · SECURE ACCESS</div>
     </div>
-    <div class="login-tabs">
-      <div class="login-tab on" id="ltabLogin" onclick="showLTab('login')">LOGIN</div>
-      <div class="login-tab" id="ltabSignup" onclick="showLTab('signup')">SIGN UP</div>
+
+    <!-- Tabs -->
+    <div style="display:flex;margin-bottom:16px;border-bottom:1px solid rgba(192,57,43,.3)">
+      <div id="ltLogin" onclick="showLTab('login')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--g1);border-bottom:2px solid var(--g1);transition:all .2s">LOGIN</div>
+      <div id="ltSignup" onclick="showLTab('signup')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s">SIGN UP</div>
     </div>
-    <div class="login-body" id="loginBody">
-      <!-- LOGIN FORM -->
-      <div id="loginForm">
-        <input class="login-inp" id="loginContact" type="text" placeholder="Email or Phone (+91xxxxxxxxxx)">
-        <input class="login-inp" id="loginPass" type="password" placeholder="Password">
-        <div class="login-st" id="loginSt"></div>
-        <button class="login-btn primary" onclick="doLogin()">ACCESS JARVIS</button>
-        <div class="login-divider">OR</div>
-        <button class="login-btn secondary" onclick="doGuest()">⚡ CONTINUE AS GUEST</button>
-      </div>
-      <!-- SIGNUP FORM -->
-      <div id="signupForm" style="display:none">
-        <input class="login-inp" id="signupName" type="text" placeholder="Your Name">
-        <input class="login-inp" id="signupContact" type="text" placeholder="Email or Phone (+91xxxxxxxxxx)">
-        <input class="login-inp" id="signupPass" type="password" placeholder="Create Password (min 6 chars)">
-        <div class="login-st" id="signupSt"></div>
-        <button class="login-btn primary" onclick="doSignup()">SEND OTP & REGISTER</button>
-        <div class="login-divider">OR</div>
-        <button class="login-btn secondary" onclick="doGuest()">⚡ CONTINUE AS GUEST</button>
-      </div>
-      <!-- OTP FORM -->
-      <div id="otpForm" style="display:none">
-        <div style="font-family:'Orbitron',monospace;font-size:9px;color:#f39c12;letter-spacing:2px;margin-bottom:12px;text-align:center" id="otpSentTo"></div>
-        <div class="otp-row">
-          <input class="otp-inp" id="otp1" maxlength="1" type="text" oninput="otpNext(this,'otp2')" onkeydown="otpBack(event,this,'')">
-          <input class="otp-inp" id="otp2" maxlength="1" type="text" oninput="otpNext(this,'otp3')" onkeydown="otpBack(event,this,'otp1')">
-          <input class="otp-inp" id="otp3" maxlength="1" type="text" oninput="otpNext(this,'otp4')" onkeydown="otpBack(event,this,'otp2')">
-          <input class="otp-inp" id="otp4" maxlength="1" type="text" oninput="otpNext(this,'otp5')" onkeydown="otpBack(event,this,'otp3')">
-          <input class="otp-inp" id="otp5" maxlength="1" type="text" oninput="otpNext(this,'otp6')" onkeydown="otpBack(event,this,'otp4')">
-          <input class="otp-inp" id="otp6" maxlength="1" type="text" oninput="otpNext(this,'')"     onkeydown="otpBack(event,this,'otp5')">
-        </div>
-        <div class="otp-timer" id="otpTimer">Resend in 60s</div>
-        <div class="login-st" id="otpSt"></div>
-        <button class="login-btn primary" onclick="verifyOTP()">VERIFY & LAUNCH</button>
-        <button class="login-btn secondary" onclick="resendOTP()" id="resendBtn" style="display:none">RESEND OTP</button>
-      </div>
+
+    <!-- LOGIN FORM -->
+    <div id="lFormLogin">
+      <input id="lContact" type="text" placeholder="Email or phone number" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:10px;outline:none">
+      <input id="lPass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <div id="lStLogin" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">⚡ ACCESS JARVIS</button>
+      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
+      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
     </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="lFormSignup" style="display:none">
+      <input id="sName" type="text" placeholder="Your name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <input id="sContact" type="text" placeholder="Email or phone (+91xxxxxxxxxx)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <input id="sPass" type="password" placeholder="Password (min 6 chars)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <div id="lStSignup" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="doSignup()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">🚀 CREATE ACCOUNT</button>
+      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
+      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
+    </div>
+
+    <!-- OTP FORM (kept for compatibility) -->
+    <div id="lFormOtp" style="display:none">
+      <div id="otpMsg" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;text-align:center;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">
+        <input class="otp-inp" id="o1" maxlength="1" oninput="oNext(this,'o2')" onkeydown="oBk(event,this,'')">
+        <input class="otp-inp" id="o2" maxlength="1" oninput="oNext(this,'o3')" onkeydown="oBk(event,this,'o1')">
+        <input class="otp-inp" id="o3" maxlength="1" oninput="oNext(this,'o4')" onkeydown="oBk(event,this,'o2')">
+        <input class="otp-inp" id="o4" maxlength="1" oninput="oNext(this,'o5')" onkeydown="oBk(event,this,'o3')">
+        <input class="otp-inp" id="o5" maxlength="1" oninput="oNext(this,'o6')" onkeydown="oBk(event,this,'o4')">
+        <input class="otp-inp" id="o6" maxlength="1" oninput="oNext(this,'')"   onkeydown="oBk(event,this,'o5')">
+      </div>
+      <div id="lStOtp" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="verifyOTP()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer">VERIFY & LAUNCH</button>
+    </div>
+
   </div>
-  <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,.2);text-align:center">STARK INDUSTRIES · CLASSIFIED SYSTEM · AUTHORIZED PERSONNEL ONLY</div>
 </div>
 
 <!-- USER BAR (shown after login) -->
@@ -2458,3 +2493,7 @@ window.addEventListener('resize', () => {
 </div>
 </body>
 </html>
+
+
+
+
