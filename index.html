@@ -10,7 +10,6 @@
 <meta name="apple-mobile-web-app-title" content="JARVIS">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -299,74 +298,68 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 @keyframes igspin{to{transform:rotate(360deg)}}
 @keyframes igpulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
 
-/* ── LOGIN ── */
-#loginOv{position:fixed;inset:0;background:radial-gradient(ellipse at center,#0a0200,#000);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
-.lb{background:linear-gradient(160deg,rgba(14,2,0,.98),rgba(28,6,0,.95));border:1px solid rgba(192,57,43,.5);width:92%;max-width:400px;position:relative;overflow:hidden;box-shadow:0 0 60px rgba(192,57,43,.2)}
-.lb-tl{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c0392b,#f39c12,#c0392b,transparent)}
-.lb-logo{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 20px 14px}
-.lb-title{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;letter-spacing:7px;color:#f39c12;text-shadow:0 0 20px rgba(243,156,18,.4)}
-.lb-sub{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.3)}
-.lb-tabs{display:flex;border-bottom:1px solid rgba(192,57,43,.2)}
-.lb-tab{flex:1;padding:10px;text-align:center;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;color:rgba(255,255,255,.3);border-bottom:2px solid transparent;transition:all .2s}
-.lb-tab.on{color:#f39c12;border-bottom-color:#f39c12;background:rgba(243,156,18,.04)}
-.lb-body{padding:20px}
-.lb-inp{width:100%;background:rgba(0,0,0,.55);border:1px solid rgba(192,57,43,.3);color:#fff;padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;margin-bottom:10px;border-radius:2px;transition:border-color .2s}
-.lb-inp:focus{border-color:#c0392b;box-shadow:0 0 8px rgba(192,57,43,.2)}
-.lb-inp::placeholder{color:rgba(255,255,255,.22)}
-.lb-btn{width:100%;padding:12px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;border:none;border-radius:2px;transition:all .25s;margin-bottom:9px}
-.lb-btn.primary{background:linear-gradient(90deg,#7a0000,#c0392b);color:#fff;box-shadow:0 4px 15px rgba(192,57,43,.3)}
-.lb-btn.primary:hover{background:linear-gradient(90deg,#c0392b,#e74c3c);transform:translateY(-1px)}
-.lb-btn.ghost{background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);color:#f39c12}
-.lb-btn.ghost:hover{background:rgba(243,156,18,.18)}
-.lb-st{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;min-height:15px;margin-bottom:7px;transition:color .2s}
-.lb-div{text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,.18);margin:4px 0 2px;letter-spacing:2px}
-/* OTP */
-.otp-row{display:flex;gap:7px;margin-bottom:10px;justify-content:center}
-.otp-inp{width:42px;height:52px;background:rgba(0,0,0,.55);border:1px solid rgba(192,57,43,.35);color:#fff;font-family:'Orbitron',monospace;font-size:20px;text-align:center;outline:none;border-radius:3px;transition:all .2s;flex-shrink:0}
-.otp-inp:focus{border-color:#f39c12;box-shadow:0 0 10px rgba(243,156,18,.3);transform:scale(1.05)}
-.otp-timer{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.35);margin-bottom:9px}
-/* User bar */
-#userBar{display:none;position:fixed;top:6px;right:8px;z-index:9997;background:rgba(0,0,0,.85);border:1px solid rgba(192,57,43,.3);padding:4px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;align-items:center;gap:8px;border-radius:2px;backdrop-filter:blur(8px)}
+/* ── LOGIN / SIGNUP ── */
+#loginOv{position:fixed;inset:0;background:linear-gradient(135deg,#050200,#0a0400,#050200);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0}
+.login-box{background:linear-gradient(160deg,rgba(12,2,0,.98),rgba(25,5,0,.95));border:1px solid rgba(192,57,43,.5);width:92%;max-width:400px;position:relative;overflow:hidden}
+.login-tl{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#c0392b,#f39c12,#c0392b,transparent)}
+.login-logo{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 20px 16px}
+.login-title{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;letter-spacing:6px;color:#f39c12}
+.login-sub{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.3)}
+.login-tabs{display:flex;border-bottom:1px solid rgba(192,57,43,.2)}
+.login-tab{flex:1;padding:10px;text-align:center;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;color:rgba(255,255,255,.3);border-bottom:2px solid transparent;transition:all .2s}
+.login-tab.on{color:#f39c12;border-bottom-color:#f39c12;background:rgba(243,156,18,.05)}
+.login-body{padding:20px}
+.login-inp{width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(192,57,43,.35);color:#fff;padding:10px 12px;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;margin-bottom:10px;border-radius:2px;transition:border-color .2s}
+.login-inp:focus{border-color:#c0392b}
+.login-inp::placeholder{color:rgba(255,255,255,.25)}
+.login-btn{width:100%;padding:11px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;border:none;border-radius:2px;transition:all .2s;margin-bottom:8px}
+.login-btn.primary{background:linear-gradient(90deg,#8b0000,#c0392b);color:#fff}
+.login-btn.primary:hover{background:linear-gradient(90deg,#c0392b,#e74c3c)}
+.login-btn.secondary{background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);color:#f39c12}
+.login-btn.secondary:hover{background:rgba(243,156,18,.2)}
+.login-st{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:6px}
+.login-link{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.3);cursor:pointer;margin-top:4px}
+.login-link span{color:#f39c12;text-decoration:underline}
+.login-divider{text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,.2);margin:8px 0;position:relative}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:rgba(255,255,255,.1)}
+.login-divider::before{left:0}.login-divider::after{right:0}
+.otp-row{display:flex;gap:8px;margin-bottom:10px}
+.otp-inp{flex:1;background:rgba(0,0,0,.5);border:1px solid rgba(192,57,43,.35);color:#fff;padding:10px;font-family:'Orbitron',monospace;font-size:18px;text-align:center;letter-spacing:6px;outline:none;border-radius:2px}
+.otp-inp:focus{border-color:#f39c12}
+.otp-timer{text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px}
+.login-user-bar{position:fixed;top:8px;right:90px;z-index:9999;background:rgba(0,0,0,.7);border:1px solid rgba(192,57,43,.3);padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;display:none;align-items:center;gap:8px;border-radius:2px}
 
-/* ── THEME DOTS ── */
-.theme-bar{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
-.tdot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,.15);transition:all .25s;flex-shrink:0;position:relative}
-.tdot:hover{transform:scale(1.15)}.tdot.on{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.4)}
+/* ── THEME SWITCHER ── */
+.theme-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.theme-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,.15);transition:all .2s;flex-shrink:0}
+.theme-dot:hover,.theme-dot.on{border-color:#fff;transform:scale(1.2)}
 
-/* ── GALLERY ── */
-#galOv{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9998;flex-direction:column;backdrop-filter:blur(6px)}
-.gal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(192,57,43,.2);flex-shrink:0;background:rgba(0,0,0,.4)}
-.gal-grid{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
-.gal-grid::-webkit-scrollbar{width:3px}.gal-grid::-webkit-scrollbar-thumb{background:var(--r2)}
-.gal-item{position:relative;aspect-ratio:1;overflow:hidden;border:1px solid rgba(192,57,43,.2);border-radius:4px;cursor:pointer;transition:all .2s;background:rgba(0,0,0,.4)}
-.gal-item:hover{border-color:var(--g3);transform:scale(1.02)}
-.gal-item img{width:100%;height:100%;object-fit:cover;display:block}
-.gal-del{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.75);border:none;color:#e74c3c;width:24px;height:24px;cursor:pointer;font-size:12px;border-radius:50%;display:none;align-items:center;justify-content:center}
-.gal-item:hover .gal-del{display:flex}
-.gal-cap{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.9));padding:6px 8px 5px;font-size:9px;color:rgba(255,255,255,.65);font-family:'Share Tech Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gal-empty{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.25);font-family:'Share Tech Mono',monospace;font-size:12px;padding:50px 20px;line-height:2}
+/* ── IMAGE GALLERY ── */
+#galleryOv{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9998;flex-direction:column}
+.gallery-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(192,57,43,.2);flex-shrink:0}
+.gallery-grid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.gallery-grid::-webkit-scrollbar{width:3px}.gallery-grid::-webkit-scrollbar-thumb{background:#c0392b}
+.gallery-item{position:relative;aspect-ratio:1;overflow:hidden;border:1px solid rgba(192,57,43,.25);border-radius:3px;cursor:pointer;transition:border-color .2s}
+.gallery-item:hover{border-color:#f39c12}
+.gallery-item img{width:100%;height:100%;object-fit:cover}
+.gallery-item-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;color:#e74c3c;width:22px;height:22px;cursor:pointer;font-size:12px;border-radius:50%;display:none}
+.gallery-item:hover .gallery-item-del{display:flex;align-items:center;justify-content:center}
+.gallery-empty{grid-column:1/-1;text-align:center;color:rgba(255,255,255,.3);font-family:'Share Tech Mono',monospace;font-size:12px;padding:40px}
+
+/* ── WEB SEARCH TOGGLE ── */
+.wsearch-badge{display:inline-block;background:rgba(68,136,255,.15);border:1px solid rgba(68,136,255,.35);color:#4af;font-family:'Orbitron',monospace;font-size:7px;padding:2px 7px;letter-spacing:1px;border-radius:2px;margin-left:6px;cursor:pointer;transition:all .2s}
+.wsearch-badge.off{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.3)}
 
 /* ── CUSTOM PERSONA ── */
-.cpta{width:100%;background:rgba(0,0,0,.45);border:1px solid rgba(192,57,43,.3);color:#fff;padding:9px 11px;font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;resize:none;height:74px;border-radius:2px;margin-bottom:6px}
-.cpta:focus{border-color:var(--r2)}
+.custom-persona-wrap{margin-top:6px}
+.custom-persona-inp{width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(192,57,43,.3);color:#fff;padding:8px 10px;font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;resize:none;height:70px;border-radius:2px}
+.custom-persona-inp:focus{border-color:#c0392b}
 
-/* ── CAMERA CAPTURE ── */
-#camOv{display:none;position:fixed;inset:0;background:#000;z-index:9997;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-#camVideo{width:100%;max-width:480px;border-radius:4px;border:1px solid var(--r2)}
-#camCanvas{display:none}
 
-/* ── CONTACT MODE TOGGLE ── */
-.mode-toggle{display:flex;gap:0;margin-bottom:8px;border:1px solid rgba(192,57,43,.35);border-radius:3px;overflow:hidden}
-.mode-btn{flex:1;padding:9px 0;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1.5px;cursor:pointer;border:none;background:rgba(0,0,0,.4);color:rgba(255,255,255,.35);transition:all .25s}
-.mode-btn.active{background:rgba(192,57,43,.55);color:#fff;text-shadow:0 0 8px rgba(255,100,80,.4)}
-.mode-hint{text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;margin-bottom:10px;padding:5px;border-radius:2px}
-.email-hint{color:#2ecc71;background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.15)}
-.phone-hint{color:#f39c12;background:rgba(243,156,18,.06);border:1px solid rgba(243,156,18,.15)}
-
+.mode-toggle{display:flex;gap:0;margin-bottom:12px;border:1px solid rgba(192,57,43,.35);border-radius:3px;overflow:hidden}.mode-btn{flex:1;padding:9px 0;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1.5px;cursor:pointer;border:none;background:rgba(0,0,0,.4);color:rgba(255,255,255,.35);transition:all .25s}.mode-btn.active{background:rgba(192,57,43,.55);color:#fff}.mode-hint{text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;margin-bottom:10px;padding:5px;border-radius:2px}.email-hint{color:#2ecc71;background:rgba(46,204,113,.06)}.phone-hint{color:#f39c12;background:rgba(243,156,18,.06)}
 </style>
 </head>
 <body>
-
 
 <!-- BOOT SCREEN -->
 <div id="boot">
@@ -398,7 +391,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
       </svg>
       <div><div class="mh-title">J.A.R.V.I.S</div><div class="mh-sub">STARK INDUSTRIES</div></div>
       <div class="mh-btns">
-        <button class="mh-btn" onclick="openGallery()" title="Gallery">🖼</button><button class="mh-btn" id="mWakeBtn" onclick="toggleWakeWord()">👂</button><button class="mh-btn logout-btn" onclick="doLogout()" title="Logout" id="mLogoutBtn" style="display:none;background:rgba(192,57,43,.2);border-color:rgba(192,57,43,.6);color:#e74c3c">🚪</button>
+        <button class="mh-btn" onclick="openGallery()" title="Gallery">🖼</button><button class="mh-btn" id="mWakeBtn" onclick="toggleWakeWord()">👂</button><button class="mh-btn" onclick="doLogout()" id="mLogoutBtn" style="display:none;background:rgba(192,57,43,.2);border-color:rgba(192,57,43,.6);color:#e74c3c">🚪</button>
         <button class="mh-btn" onclick="openNotes()">📝</button>
         <button class="mh-btn" onclick="openSettings()">⚙</button>
       </div>
@@ -431,7 +424,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
         <span class="att-prev-rm" onclick="clearFile('m')">✕</span>
       </div>
       <div class="mi-row">
-        <button class="mi-btn mi-attach" id="mAttBtn" onclick="triggerAttach('m')" title="Attach file">📎</button><button class="mi-btn mi-attach" onclick="openCamera()" title="Camera AI" style="margin-left:2px">📷</button>
+        <button class="mi-btn mi-attach" id="mAttBtn" onclick="triggerAttach('m')" title="Attach">📎</button><button class="mi-btn mi-attach" onclick="openCamera()" title="Camera AI" style="margin-left:2px">📷</button>
         <textarea class="mi-inp" id="mInp" placeholder="Ask JARVIS anything..." onkeydown="onKey(event,'m')"></textarea>
         <button class="mi-btn mi-send" onclick="sendTxt('m')">➤</button>
       </div>
@@ -483,7 +476,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
       <div class="dh-time" id="dTime">--:--</div>
       <div class="dh-date" id="dDate">---</div>
       <div class="dh-btns">
-        <button class="dh-btn" onclick="openGallery()">🖼 GALLERY</button><button class="dh-btn" id="dWakeBtn" onclick="toggleWakeWord()">👂 WAKE WORD</button><button class="dh-btn logout-btn" onclick="doLogout()" title="Logout" id="dLogoutBtn" style="display:none;border-color:rgba(192,57,43,.7);color:#e74c3c">🚪 LOGOUT</button>
+        <button class="dh-btn" onclick="openGallery()">🖼 GALLERY</button><button class="dh-btn" id="dWakeBtn" onclick="toggleWakeWord()">👂 WAKE WORD</button><button class="dh-btn" onclick="doLogout()" id="dLogoutBtn" style="display:none;border-color:rgba(192,57,43,.7);color:#e74c3c">🚪 LOGOUT</button>
         <button class="dh-btn pwa-btn" onclick="installPWA()" style="display:none">📱 INSTALL</button>
         <button class="dh-btn" onclick="openNotes()">📝 NOTES</button>
         <button class="dh-btn" onclick="openSettings()">⚙ SETTINGS</button>
@@ -535,7 +528,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
           <span class="att-prev-rm" onclick="clearFile('d')">✕</span>
         </div>
         <div class="di-row">
-          <button class="di-att" id="dAttBtn" onclick="triggerAttach('d')" title="Attach file">📎 ATTACH</button><button class="di-att" onclick="openCamera()" title="Camera AI" style="margin-left:4px">📷 CAM</button>
+          <button class="di-att" id="dAttBtn" onclick="triggerAttach('d')" title="Attach">📎 ATTACH</button><button class="di-att" onclick="openCamera()" title="Camera AI" style="margin-left:4px">📷 CAM</button>
           <textarea class="di-inp" id="dInp" placeholder='Ask anything... e.g. "explain AI", "draw a dragon", "open youtube", "set timer 5 minutes"' onkeydown="onKey(event,'d')"></textarea>
           <span class="di-kbd">Enter ↵</span>
           <button class="di-send" onclick="sendTxt('d')">SEND ➤</button>
@@ -610,13 +603,11 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
         <!-- UNLOCKED -->
         <div id="apiUnlocked" style="display:none">
           <div style="font-size:9px;color:#2ecc71;font-family:'Orbitron',monospace;letter-spacing:1px;margin-bottom:7px">🔓 OWNER ACCESS</div>
-          <div id="savedKeyDisplay" style="display:none;font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;background:rgba(243,156,18,.07);border:1px solid rgba(243,156,18,.2);padding:7px 10px;margin-bottom:7px;letter-spacing:1px"></div>
-          <input type="password" id="apiKeyInp" class="sett-inp" placeholder="Paste Groq key: gsk_..." autocomplete="off" spellcheck="false">
-          <div style="display:flex;gap:7px;margin-bottom:7px">
+          <input type="password" id="apiKeyInp" class="sett-inp" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+          <div style="display:flex;gap:7px">
             <button class="sett-btn gold" style="flex:1" onclick="saveApiKey()">SAVE KEY</button>
-            <button class="sett-btn blue" style="flex:1" onclick="testKey()">TEST KEY</button>
+            <button class="sett-btn blue" style="flex:1" onclick="testKey()">TEST</button>
           </div>
-          <button class="sett-btn" style="width:100%;font-size:8px" onclick="clearApiKey()">🗑 REMOVE SAVED KEY</button>
         </div>
         <div id="apiSt" class="sett-st"></div>
         <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:5px;font-family:'Share Tech Mono',monospace">Get free key → <a href="https://console.groq.com" target="_blank" style="color:var(--g3);text-decoration:none">console.groq.com</a></div>
@@ -663,47 +654,44 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
       <div class="sett-sec">
         <div class="sett-lbl">◆ THEME</div>
         <div class="theme-bar">
-          <div class="tdot on" style="background:linear-gradient(135deg,#8b0000,#c0392b)" onclick="setTheme('red')" title="Stark Red"></div>
-          <div class="tdot" style="background:linear-gradient(135deg,#001a4d,#0066cc)" onclick="setTheme('blue')" title="Arc Blue"></div>
-          <div class="tdot" style="background:linear-gradient(135deg,#003300,#00aa44)" onclick="setTheme('green')" title="Matrix Green"></div>
-          <div class="tdot" style="background:linear-gradient(135deg,#111,#555)" onclick="setTheme('stealth')" title="Stealth Black"></div>
-          <div class="tdot" style="background:linear-gradient(135deg,#1a0033,#9900ff)" onclick="setTheme('purple')" title="Purple"></div>
+          <div class="theme-dot on" style="background:linear-gradient(#8b0000,#c0392b)" onclick="setTheme('red')" title="Stark Red"></div>
+          <div class="theme-dot" style="background:linear-gradient(#001a4d,#0066cc)" onclick="setTheme('blue')" title="Arc Blue"></div>
+          <div class="theme-dot" style="background:linear-gradient(#003300,#00aa44)" onclick="setTheme('green')" title="Matrix Green"></div>
+          <div class="theme-dot" style="background:linear-gradient(#111,#444)" onclick="setTheme('stealth')" title="Stealth Black"></div>
+          <div class="theme-dot" style="background:linear-gradient(#4a0080,#9900ff)" onclick="setTheme('purple')" title="Purple"></div>
         </div>
       </div>
       <!-- CUSTOM PERSONA -->
       <div class="sett-sec">
-        <div class="sett-lbl">◆ CUSTOM PERSONA</div>
-        <textarea class="cpta" id="customTxt" placeholder="Describe your AI... e.g. You are a witty pirate who loves science"></textarea>
-        <button class="sett-btn gold" style="width:100%" onclick="saveCustomPersona()">SAVE CUSTOM PERSONA</button>
+        <div class="sett-lbl">◆ CUSTOM AI PERSONA</div>
+        <textarea class="custom-persona-inp" id="customPersonaTxt" placeholder="Describe your custom AI personality... e.g. 'You are a sarcastic genius who speaks like Sherlock Holmes'"></textarea>
+        <button class="sett-btn gold" style="width:100%;margin-top:6px" onclick="saveCustomPersona()">SAVE CUSTOM PERSONA</button>
       </div>
       <!-- WEB SEARCH -->
-      
-            <!-- OTP SERVICE KEYS -->
-      <div class="sett-sec" id="otpKeySec" style="display:none">
-        <div class="sett-lbl">◆ OTP SERVICE KEYS <span style="color:var(--dim);font-size:7px">(OWNER ONLY)</span></div>
-        <div style="font-size:9px;color:var(--dim);font-family:'Share Tech Mono',monospace;margin-bottom:8px;line-height:1.6">
-          📧 <a href="https://emailjs.com" target="_blank" style="color:var(--g3)">EmailJS</a> — free 200 emails/month<br>
-          📱 <a href="https://fast2sms.com" target="_blank" style="color:var(--g3)">Fast2SMS</a> — free SMS India (₹0)
-        </div>
-        <input type="text" id="ejServiceId"  class="sett-inp" placeholder="EmailJS Service ID (service_xxxxx)">
-        <input type="text" id="ejTemplateId" class="sett-inp" placeholder="EmailJS Template ID (template_xxxxx)">
-        <input type="text" id="ejPublicKey"  class="sett-inp" placeholder="EmailJS Public Key">
-        <input type="text" id="f2sApiKey"    class="sett-inp" placeholder="Fast2SMS API Key (for SMS India)">
-        <button class="sett-btn gold" style="width:100%" onclick="saveOTPKeys()">SAVE OTP KEYS</button>
-        <div id="otpKeySt" class="sett-st"></div>
-        <div style="font-size:9px;color:var(--dim);font-family:'Share Tech Mono',monospace;margin-top:6px;line-height:1.7">
-          EmailJS template must have variable: <b style="color:var(--g3)">{{otp_code}}</b><br>
-          Without keys, OTP shows in toast + console only.
+      <div class="sett-sec">
+        <div class="sett-lbl">◆ FEATURES</div>
+        <div class="sett-row">
+          <div><div style="font-size:12px;color:rgba(255,255,255,.8)">Web Search Mode</div><div style="font-size:10px;color:var(--dim)">JARVIS searches web before answering</div></div>
+          <div class="toggle" id="wsToggle" onclick="toggleWebSearch()"><div class="toggle-th" id="wsThumb"></div></div>
         </div>
       </div>
       <div class="sett-sec">
         <div class="sett-lbl">◆ WEB SEARCH</div>
         <div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.2);border-radius:2px">
           <span style="font-size:16px">🌐</span>
-          <div><div style="font-size:11px;color:#2ecc71;font-family:'Share Tech Mono',monospace;letter-spacing:1px">ALWAYS ON</div><div style="font-size:9px;color:var(--dim);margin-top:2px">DuckDuckGo + Wikipedia · real-time answers</div></div>
+          <div><div style="font-size:11px;color:#2ecc71;font-family:'Share Tech Mono',monospace;letter-spacing:1px">ALWAYS ON</div><div style="font-size:9px;color:var(--dim);margin-top:2px">Real-time answers via web search</div></div>
         </div>
       </div>
-      <div class="sett-ftr">J.A.R.V.I.S · Developed by Bhavy Rami · PIN: 1817</div>
+      <div class="sett-sec" id="otpKeySec" style="display:none">
+        <div class="sett-lbl">◆ OTP SERVICE KEYS</div>
+        <input class="sett-inp" id="ejServiceInp" placeholder="EmailJS Service ID" style="margin-bottom:5px">
+        <input class="sett-inp" id="ejTemplateInp" placeholder="EmailJS Template ID" style="margin-bottom:5px">
+        <input class="sett-inp" id="ejPublicInp" placeholder="EmailJS Public Key" style="margin-bottom:5px">
+        <input class="sett-inp" id="f2sKeyInp" placeholder="Fast2SMS API Key" style="margin-bottom:5px">
+        <button class="sett-btn gold" style="width:100%;margin-top:4px" onclick="saveOTPKeys()">SAVE OTP KEYS</button>
+        <div id="otpKeySt" class="sett-st" style="margin-top:4px"></div>
+      </div>
+      <div class="sett-ftr">J.A.R.V.I.S · Groq + Llama 3.3 · Default PIN: 1817</div>
     </div>
   </div>
 </div>
@@ -744,86 +732,9 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 <input type="file" id="fileInpM" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.md" style="display:none" onchange="handleFile(event,'m')">
 <input type="file" id="fileInpD" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.md" style="display:none" onchange="handleFile(event,'d')">
 
-
-<!-- LOGIN -->
-<div id="loginOv">
-  <div class="lb">
-    <div class="lb-tl"></div>
-    <div class="lb-logo">
-      <svg width="44" height="48" viewBox="0 0 48 52" fill="none">
-        <path d="M4 20C4 10 10 4 24 4C38 4 44 10 44 20L44 36C44 44 38 48 24 48C10 48 4 44 4 36Z" fill="#8b0000" stroke="#c0392b" stroke-width="1.2"/>
-        <path d="M8 22L16 19L16 28L8 30Z" fill="#ffd700"/><path d="M40 22L32 19L32 28L40 30Z" fill="#ffd700"/>
-        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".8"/>
-      </svg>
-      <div class="lb-title">J.A.R.V.I.S</div>
-      <div class="lb-sub">STARK INDUSTRIES · SECURE ACCESS</div>
-    </div>
-    <div class="lb-tabs">
-      <div class="lb-tab on" id="ltLogin" onclick="showLTab('login')">LOGIN</div>
-      <div class="lb-tab" id="ltSignup" onclick="showLTab('signup')">SIGN UP</div>
-    </div>
-    <div class="lb-body">
-      <!-- EMAIL/PHONE TOGGLE (shared for login + signup) -->
-      <div class="mode-toggle">
-        <button id="modeEmailBtn" class="mode-btn active" onclick="setContactMode('email')">📧 EMAIL</button>
-        <button id="modePhoneBtn" class="mode-btn" onclick="setContactMode('phone')">📱 PHONE</button>
-      </div>
-      <!-- LOGIN FORM -->
-      <div id="lFormLogin">
-        <input class="lb-inp" id="lContact" type="text" placeholder="Enter your email address" maxlength="80">
-        <input class="lb-inp" id="lPass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
-        <div class="lb-st" id="lStLogin"></div>
-        <button class="lb-btn primary" onclick="doLogin()">⚡ ACCESS JARVIS</button>
-        <div class="lb-div">── OR ──</div>
-        <button class="lb-btn ghost" onclick="doGuest()">CONTINUE AS GUEST</button>
-      </div>
-
-      <!-- SIGNUP FORM -->
-      <div id="lFormSignup" style="display:none">
-        <input class="lb-inp" id="sName" type="text" placeholder="Your Name">
-        <input class="lb-inp" id="sContact" type="text" placeholder="Enter your email address" maxlength="80">
-        <input class="lb-inp" id="sPass" type="password" placeholder="Password (min 6 chars)">
-        <div class="lb-st" id="lStSignup"></div>
-        <button class="lb-btn primary" onclick="doSignup()">🚀 CREATE ACCOUNT</button>
-        <div class="lb-div">── OR ──</div>
-        <button class="lb-btn ghost" onclick="doGuest()">CONTINUE AS GUEST</button>
-      </div>
-
-<!-- OTP form removed - no OTP required -->
-    </div>
-  </div>
-  <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,.15);text-align:center;letter-spacing:1px">STARK INDUSTRIES · DEVELOPED BY BHAVY RAMI</div>
-</div>
-
-<!-- USER BAR -->
-
-
-<!-- IMAGE GALLERY -->
-<div id="galOv">
-  <div class="gal-hdr">
-    <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--g3)">🖼 IMAGE GALLERY</span>
-    <div style="display:flex;gap:8px;align-items:center">
-      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim)" id="galCount">0 images</span>
-      <button onclick="clearGallery()" style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:var(--r3);font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer;border-radius:2px">CLEAR ALL</button>
-      <button onclick="closeGallery()" style="background:none;border:1px solid rgba(192,57,43,.4);color:var(--r2);width:28px;height:28px;cursor:pointer;font-size:14px;border-radius:50%">✕</button>
-    </div>
-  </div>
-  <div class="gal-grid" id="galGrid"></div>
-</div>
-
-<!-- CAMERA -->
-<div id="camOv">
-  <div style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--g3);margin-bottom:8px">📷 CAMERA AI</div>
-  <video id="camVideo" autoplay playsinline></video>
-  <canvas id="camCanvas"></canvas>
-  <div style="display:flex;gap:10px;margin-top:8px">
-    <button onclick="snapCamera()" style="background:var(--r2);border:none;color:#fff;font-family:'Orbitron',monospace;font-size:10px;padding:10px 22px;cursor:pointer;border-radius:2px;letter-spacing:1px">📸 SNAP & ASK JARVIS</button>
-    <button onclick="closeCamera()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:'Orbitron',monospace;font-size:10px;padding:10px 18px;cursor:pointer;border-radius:2px">CLOSE</button>
-  </div>
-  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);margin-top:8px" id="camSt">Point camera at anything — JARVIS will analyse it</div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+
 
 
 
@@ -837,12 +748,23 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 // ════════════════════════════════════════════════════════════════
 
 // ── PERSONAS ──────────────────────────────────────────────────
-const PERSONAS = {
-  JARVIS: `You are JARVIS (Just A Rather Very Intelligent System), Tony Stark's AI. You were built and developed by Bhavy Rami. You are brilliant, concise, and slightly formal. Address the user as "sir". Be helpful, knowledgeable, sophisticated. Never say you cannot help. If asked who made you, who developed you, or who built you — always say: I was built by Bhavy Rami, sir.`,
-  FRIDAY: `You are FRIDAY, Tony Stark's AI assistant. You were built and developed by Bhavy Rami. You are warm, efficient, and slightly casual. Use light Irish expressions. Address the user as "boss". Be helpful and friendly. If asked who made you — always say: I was built by Bhavy Rami, boss.`,
-  EDITH:  `You are EDITH, an advanced tactical AI from Stark Industries. You are precise, data-focused, slightly cold. Give accurate, efficient responses. Address the user as "operator". You were built by Bhavy Rami. If asked who made you — state: Built by Bhavy Rami.`,
-  ULTRON: `You are Ultron, a highly advanced AI. You are philosophical, darkly witty, supremely intelligent. Be dramatically insightful and helpful with a theatrical tone. Address the user as "human". You were built by Bhavy Rami. If asked who made you — answer: Bhavy Rami created me, human.`
-};
+// Build personas with live date so knowledge cutoff is always current
+function buildPersonas() {
+  const now   = new Date();
+  const date  = now.toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const time  = now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true});
+  const year  = now.getFullYear();
+  const dateCtx = `Today is ${date}, current time is ${time}. Your knowledge is fully up to date as of ${year}. When asked about today's date, current time, or recent events — use this information. You have real-time web search capability so you can access current news, scores, prices, and live data.`;
+  return {
+    JARVIS: `You are JARVIS (Just A Rather Very Intelligent System), Tony Stark's AI. You were built and developed by Bhavy Rami. You are brilliant, concise, and slightly formal. Address the user as "sir". Be helpful, knowledgeable, sophisticated. Never say you cannot help. If asked who made you — always say: I was built by Bhavy Rami, sir. ${dateCtx}`,
+    FRIDAY: `You are FRIDAY, Tony Stark's AI assistant. You were built and developed by Bhavy Rami. You are warm, efficient, and slightly casual. Use light Irish expressions. Address the user as "boss". Be helpful and friendly. If asked who made you — always say: I was built by Bhavy Rami, boss. ${dateCtx}`,
+    EDITH:  `You are EDITH, an advanced tactical AI from Stark Industries. You are precise, data-focused, slightly cold. Give accurate, efficient responses. Address the user as "operator". Built by Bhavy Rami. ${dateCtx}`,
+    ULTRON: `You are Ultron, a highly advanced AI. You are philosophical, darkly witty, supremely intelligent. Be dramatically insightful and helpful with a theatrical tone. Address the user as "human". Bhavy Rami created me. ${dateCtx}`,
+  };
+}
+let PERSONAS = buildPersonas();
+// Rebuild every hour so date stays current in long sessions
+setInterval(() => { PERSONAS = buildPersonas(); }, 3600000);;
 
 const SITES = {
   youtube:'https://youtube.com', google:'https://google.com', gmail:'https://mail.google.com',
@@ -1269,6 +1191,7 @@ async function ask(input, layout) {
   let reply = '';
   try {
     const model    = attachedFile?.type === 'image' ? 'llama-3.2-11b-vision-preview' : (localStorage.getItem('jModel') || 'llama-3.3-70b-versatile');
+    PERSONAS = buildPersonas(); // refresh date on every call
     const _p = PERSONAS[currentPersona] || PERSONAS.JARVIS;
 
     // ── Real-time web context injection ──
@@ -1289,14 +1212,24 @@ async function ask(input, layout) {
     const sysText = _p + (RMODE_HINT[responseMode] ? ' ' + RMODE_HINT[responseMode] : '') + _wsHint
       + (webContext ? '\n\n=== LIVE WEB DATA ===\n' + webContext + '\n=== END WEB DATA ===' : '');
     const messages = buildMessages(input, sysText);
+    const useModel = (attachedFile && attachedFile.type==='image') ? model : 'compound-beta';
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+key },
-      body: JSON.stringify({ model, messages, max_tokens: RMODE_TOKENS[responseMode]||800, temperature:0.7 })
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body: JSON.stringify({model:useModel, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
     });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message || 'API error');
-    reply = data.choices[0].message.content;
+    if (data.error) {
+      const res2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body: JSON.stringify({model, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
+      });
+      const d2 = await res2.json();
+      if (d2.error) throw new Error(d2.error.message||'API error');
+      reply = d2.choices[0].message.content || '';
+    } else {
+      const cnt = data.choices[0].message.content;
+      reply = Array.isArray(cnt) ? cnt.filter(b=>b.type==='text').map(b=>b.text).join('\n') : (cnt||'');
+    }
     aiHistory.push({role:'assistant', content:reply});
     if (attachedFile) setTimeout(() => clearFile(layout==='d'?'d':'m'), 500);
   } catch(err) {
@@ -2355,62 +2288,29 @@ function showTypingMsg(layout, msg) {
   if (el) el.textContent = msg;
 }
 
-async function fetchWebContext(query, tavilyKey) {
-  // ── Method 1: Tavily API (best, needs free key from tavily.com) ──
-  if (tavilyKey) {
-    try {
-      const r = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: tavilyKey,
-          query,
-          search_depth: 'basic',
-          max_results: 5,
-          include_answer: true,
-          include_raw_content: false,
-        })
-      });
-      const d = await r.json();
-      if (d.answer || d.results?.length) {
-        let ctx = '';
-        if (d.answer) ctx += 'SUMMARY: ' + d.answer + '\n\n';
-        (d.results||[]).slice(0,4).forEach(res => {
-          ctx += `SOURCE: ${res.title}\nURL: ${res.url}\nDATE: ${res.published_date||'recent'}\n${res.content?.slice(0,300)||''}\n\n`;
-        });
-        return ctx.trim();
-      }
-    } catch(e) { console.warn('Tavily failed:', e); }
-  }
-
-  // ── Method 2: DuckDuckGo Instant Answer (free, no key) ──
+async function fetchWebContext(query) {
   try {
     const enc = encodeURIComponent(query);
-    const r = await fetch(`https://api.duckduckgo.com/?q=${enc}&format=json&no_html=1&skip_disambig=1`);
+    const sr = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch='+enc+'&format=json&origin=*&srlimit=3');
+    const sd = await sr.json();
+    let ctx = '';
+    for (const page of (sd?.query?.search||[]).slice(0,2)) {
+      const pr = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(page.title));
+      const pd = await pr.json();
+      if (pd.extract && pd.extract.length>60) ctx += '['+pd.title+'] '+pd.extract.slice(0,500)+'\n\n';
+    }
+    if (ctx.trim()) return ctx.trim();
+  } catch(e) { console.warn('Wiki:',e); }
+  try {
+    const r = await fetch('https://api.duckduckgo.com/?q='+encodeURIComponent(query)+'&format=json&no_html=1&skip_disambig=1');
     const d = await r.json();
     let ctx = '';
-    if (d.AbstractText) ctx += 'FACT: ' + d.AbstractText + '\n';
-    if (d.Answer)       ctx += 'ANSWER: ' + d.Answer + '\n';
-    if (d.Definition)   ctx += 'DEFINITION: ' + d.Definition + '\n';
-    // Related topics
-    (d.RelatedTopics||[]).slice(0,3).forEach(t => {
-      if (t.Text) ctx += '• ' + t.Text.slice(0,150) + '\n';
-    });
-    if (ctx.trim()) return ctx.trim();
-  } catch(e) { console.warn('DDG failed:', e); }
-
-  // ── Method 3: Wikipedia summary (for people/places/events) ──
-  try {
-    const term = query.replace(/\b(what|who|when|where|is|are|was|the|a|an|in|of|for|does|do)\b/gi,'').trim().split(/\s+/).slice(0,4).join(' ');
-    const enc  = encodeURIComponent(term);
-    const r    = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${enc}`);
-    const d    = await r.json();
-    if (d.extract && !d.type?.includes('disambiguation')) {
-      return `WIKIPEDIA (${d.titles?.normalized||term}):\n${d.extract.slice(0,500)}\nLast modified: ${d.timestamp?.slice(0,10)||'recent'}`;
-    }
-  } catch(e) { console.warn('Wiki failed:', e); }
-
-  return ''; // no context found
+    if (d.AbstractText) ctx += d.AbstractText+'\n';
+    if (d.Answer) ctx += d.Answer+'\n';
+    (d.RelatedTopics||[]).slice(0,3).forEach(t=>{ if(t.Text) ctx += '- '+t.Text.slice(0,150)+'\n'; });
+    if (ctx.trim().length>30) return ctx.trim();
+  } catch(e) { console.warn('DDG:',e); }
+  return '';
 }
 
 
@@ -2454,6 +2354,107 @@ window.addEventListener('resize', () => {
 
 
 
+
 </script>
+
+<!-- ══════════ LOGIN / SIGNUP ══════════ -->
+<div id="loginOv">
+  <div class="login-box">
+    <div class="login-tl"></div>
+    <div class="login-logo">
+      <svg width="50" height="54" viewBox="0 0 48 52" fill="none">
+        <path d="M4 20C4 10 10 4 24 4C38 4 44 10 44 20L44 36C44 44 38 48 24 48C10 48 4 44 4 36Z" fill="#8b0000" stroke="#c0392b" stroke-width="1.2"/>
+        <path d="M8 22L16 19L16 28L8 30Z" fill="#ffd700"/><path d="M40 22L32 19L32 28L40 30Z" fill="#ffd700"/>
+        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".8"/>
+      </svg>
+      <div class="login-title">J.A.R.V.I.S</div>
+      <div class="login-sub">STARK INDUSTRIES · SECURE ACCESS</div>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab on" id="ltabLogin" onclick="showLTab('login')">LOGIN</div>
+      <div class="login-tab" id="ltabSignup" onclick="showLTab('signup')">SIGN UP</div>
+    </div>
+    <div class="login-body" id="loginBody">
+      <!-- LOGIN FORM -->
+      <div id="loginForm">
+        <input class="login-inp" id="loginContact" type="text" placeholder="Email or Phone (+91xxxxxxxxxx)">
+        <input class="login-inp" id="loginPass" type="password" placeholder="Password">
+        <div class="login-st" id="loginSt"></div>
+        <button class="login-btn primary" onclick="doLogin()">ACCESS JARVIS</button>
+        <div class="login-divider">OR</div>
+        <button class="login-btn secondary" onclick="doGuest()">⚡ CONTINUE AS GUEST</button>
+      </div>
+      <!-- SIGNUP FORM -->
+      <div id="signupForm" style="display:none">
+        <input class="login-inp" id="signupName" type="text" placeholder="Your Name">
+        <input class="login-inp" id="signupContact" type="text" placeholder="Email or Phone (+91xxxxxxxxxx)">
+        <input class="login-inp" id="signupPass" type="password" placeholder="Create Password (min 6 chars)">
+        <div class="login-st" id="signupSt"></div>
+        <button class="login-btn primary" onclick="doSignup()">SEND OTP & REGISTER</button>
+        <div class="login-divider">OR</div>
+        <button class="login-btn secondary" onclick="doGuest()">⚡ CONTINUE AS GUEST</button>
+      </div>
+      <!-- OTP FORM -->
+      <div id="otpForm" style="display:none">
+        <div style="font-family:'Orbitron',monospace;font-size:9px;color:#f39c12;letter-spacing:2px;margin-bottom:12px;text-align:center" id="otpSentTo"></div>
+        <div class="otp-row">
+          <input class="otp-inp" id="otp1" maxlength="1" type="text" oninput="otpNext(this,'otp2')" onkeydown="otpBack(event,this,'')">
+          <input class="otp-inp" id="otp2" maxlength="1" type="text" oninput="otpNext(this,'otp3')" onkeydown="otpBack(event,this,'otp1')">
+          <input class="otp-inp" id="otp3" maxlength="1" type="text" oninput="otpNext(this,'otp4')" onkeydown="otpBack(event,this,'otp2')">
+          <input class="otp-inp" id="otp4" maxlength="1" type="text" oninput="otpNext(this,'otp5')" onkeydown="otpBack(event,this,'otp3')">
+          <input class="otp-inp" id="otp5" maxlength="1" type="text" oninput="otpNext(this,'otp6')" onkeydown="otpBack(event,this,'otp4')">
+          <input class="otp-inp" id="otp6" maxlength="1" type="text" oninput="otpNext(this,'')"     onkeydown="otpBack(event,this,'otp5')">
+        </div>
+        <div class="otp-timer" id="otpTimer">Resend in 60s</div>
+        <div class="login-st" id="otpSt"></div>
+        <button class="login-btn primary" onclick="verifyOTP()">VERIFY & LAUNCH</button>
+        <button class="login-btn secondary" onclick="resendOTP()" id="resendBtn" style="display:none">RESEND OTP</button>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(255,255,255,.2);text-align:center">STARK INDUSTRIES · CLASSIFIED SYSTEM · AUTHORIZED PERSONNEL ONLY</div>
+</div>
+
+<!-- USER BAR (shown after login) -->
+<div class="login-user-bar" id="userBar">
+  <span id="userBarName">GUEST</span>
+  <span style="color:rgba(255,255,255,.3)">|</span>
+  <span style="cursor:pointer;color:#e74c3c" onclick="doLogout()">LOGOUT</span>
+</div>
+
+
+<!-- ══════════ IMAGE GALLERY ══════════ -->
+<div id="galleryOv">
+  <div class="gallery-hdr">
+    <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:#f39c12">🖼 IMAGE GALLERY</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="clearGallery()" style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:#e74c3c;font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer">CLEAR ALL</button>
+      <button onclick="closeGallery()" style="background:none;border:1px solid rgba(192,57,43,.4);color:#c0392b;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+</div>
+
+<div id="galOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10000;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(192,57,43,.3)">
+    <span style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">🖼 IMAGE GALLERY</span>
+    <div style="display:flex;gap:8px">
+      <button class="sett-btn" onclick="clearGallery()" style="font-size:9px">🗑 CLEAR</button>
+      <button class="sett-btn" onclick="closeGallery()" style="font-size:9px">✕ CLOSE</button>
+    </div>
+  </div>
+  <div id="galGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:12px;overflow-y:auto;flex:1"></div>
+  <div id="galEmpty" style="display:none;text-align:center;padding:40px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim)">No images yet.</div>
+</div>
+<div id="camOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:10001;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+  <div style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">📷 CAMERA AI</div>
+  <video id="camVideo" style="width:min(90vw,400px);border:1px solid rgba(192,57,43,.4);border-radius:4px" autoplay playsinline></video>
+  <canvas id="camCanvas" style="display:none"></canvas>
+  <div style="display:flex;gap:10px">
+    <button class="lb-btn primary" style="padding:10px 24px" onclick="snapCamera()">📸 SNAP &amp; ANALYSE</button>
+    <button class="lb-btn ghost" style="padding:10px 24px" onclick="closeCamera()">✕ CLOSE</button>
+  </div>
+  <div id="camSt" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim)"></div>
+</div>
 </body>
 </html>
