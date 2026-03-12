@@ -757,6 +757,8 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -1019,6 +1021,7 @@ let _lastSpoken = '';
 
 function speakOut(text) {
   if (!voiceRespOn || !window.speechSynthesis) return;
+  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
   // Clean markdown symbols
   const clean = text.replace(/[*#`>_~]/g,'').replace(/\s+/g,' ').trim();
@@ -1183,14 +1186,8 @@ async function ask(input, layout) {
     return;
   }
 
-  // Check API key
-  const key = localStorage.getItem('jApiKey');
-  if (!key) {
-    addChat(input, 'u', layout);
-    addChat('JARVIS is ready, sir. How can I assist you?', 'j', layout);
-    setTimeout(openSettings, 800);
-    return;
-  }
+  // Use saved key or built-in app key
+  const key = localStorage.getItem('jApiKey') || _appKey();
 
   if (busy) return;
 
@@ -1234,24 +1231,15 @@ async function ask(input, layout) {
     const sysText = _p + (RMODE_HINT[responseMode] ? ' ' + RMODE_HINT[responseMode] : '') + _wsHint
       + (webContext ? '\n\n=== LIVE WEB DATA ===\n' + webContext + '\n=== END WEB DATA ===' : '');
     const messages = buildMessages(input, sysText);
-    const useModel = (attachedFile && attachedFile.type==='image') ? model : 'compound-beta';
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body: JSON.stringify({model:useModel, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body: JSON.stringify({model, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
     });
+    if (!res.ok) throw new Error('HTTP '+res.status+' — check API key');
     const data = await res.json();
-    if (data.error) {
-      const res2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-        body: JSON.stringify({model, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
-      });
-      const d2 = await res2.json();
-      if (d2.error) throw new Error(d2.error.message||'API error');
-      reply = d2.choices[0].message.content || '';
-    } else {
-      const cnt = data.choices[0].message.content;
-      reply = Array.isArray(cnt) ? cnt.filter(b=>b.type==='text').map(b=>b.text).join('\n') : (cnt||'');
-    }
+    if (data.error) throw new Error(data.error.message||'API error');
+    reply = data.choices[0]?.message?.content || '';
     aiHistory.push({role:'assistant', content:reply});
     if (attachedFile) setTimeout(() => clearFile(layout==='d'?'d':'m'), 500);
   } catch(err) {
@@ -2396,6 +2384,8 @@ if (document.readyState === 'loading') {
 
 
 
+
+
 </script>
 
 <!-- ══════════ LOGIN / SIGNUP ══════════ -->
@@ -2500,4 +2490,3 @@ if (document.readyState === 'loading') {
 </div>
 </body>
 </html>
-
