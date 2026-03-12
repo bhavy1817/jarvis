@@ -752,6 +752,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -1012,8 +1013,22 @@ const PVOX = {
 // Last spoken text for rehear button
 let _lastSpoken = '';
 
+
+// ── Mobile audio unlock (iOS requires user gesture before TTS) ──
+let _audioUnlocked = false;
+function _unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  // Speak silent utterance to unlock audio on iOS
+  if (window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+  }
+}
 function speakOut(text) {
   if (!voiceRespOn || !window.speechSynthesis) return;
+  _unlockAudio();
   if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
   // Clean markdown symbols
@@ -1024,28 +1039,49 @@ function speakOut(text) {
 
 function _speakChunked(text) {
   if (!text || !window.speechSynthesis) return;
-  // Split into sentences so browser doesn't silently cut off long text
   const chunks = text.match(/[^.!?]+[.!?]*/g) || [text];
   const pv     = PVOX[currentPersona] || PVOX.JARVIS;
-  // Get voice once
-  const voices = window.speechSynthesis.getVoices();
-  let voice = null;
-  if (voices.length) {
-    voice = voices.find(v => v.lang.startsWith(pv.lang) && v.name.toLowerCase().includes('female') === (currentPersona==='FRIDAY'||currentPersona==='EDITH'))
-         || voices.find(v => v.lang.startsWith(pv.lang))
-         || voices.find(v => v.lang.startsWith('en'));
+
+  function _doSpeak(voices) {
+    // Pick best matching voice for persona
+    let voice = null;
+    const isFemale = currentPersona==='FRIDAY' || currentPersona==='EDITH';
+    // Try exact lang + gender match
+    voice = voices.find(v => v.lang.startsWith(pv.lang) && v.name.toLowerCase().includes(isFemale?'female':'male'));
+    // Try lang only
+    if (!voice) voice = voices.find(v => v.lang.startsWith(pv.lang));
+    // Try any English
+    if (!voice) voice = voices.find(v => v.lang.startsWith('en-GB'));
+    if (!voice) voice = voices.find(v => v.lang.startsWith('en'));
+
+    chunks.forEach(chunk => {
+      const c = chunk.trim();
+      if (!c) return;
+      const u = new SpeechSynthesisUtterance(c);
+      u.pitch  = pv.pitch;
+      u.rate   = pv.rate;
+      u.volume = 1;
+      if (voice) u.voice = voice;
+      window.speechSynthesis.speak(u);
+    });
   }
-  // Queue each chunk
-  chunks.forEach((chunk, i) => {
-    const c = chunk.trim();
-    if (!c) return;
-    const u   = new SpeechSynthesisUtterance(c);
-    u.pitch   = pv.pitch;
-    u.rate    = pv.rate;
-    u.volume  = 1;
-    if (voice) u.voice = voice;
-    window.speechSynthesis.speak(u);
-  });
+
+  // Mobile: voices load asynchronously — wait if not ready
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    _doSpeak(voices);
+  } else {
+    // Wait for voices to load (mobile Safari/Chrome)
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      _doSpeak(window.speechSynthesis.getVoices());
+    };
+    // Fallback: try after 1s even if event doesn't fire
+    setTimeout(() => {
+      const v2 = window.speechSynthesis.getVoices();
+      if (v2.length > 0) _doSpeak(v2);
+    }, 1000);
+  }
 }
 
 function rehearLast() {
@@ -1282,7 +1318,7 @@ function buildMessages(input, sysText) {
 
 // ── FOLLOW-UP SUGGESTIONS ──────────────────────────────────────
 async function generateFollowUps(reply, layout) {
-  const key = localStorage.getItem('jApiKey');
+  const key = localStorage.getItem('jApiKey') || _appKey();
   if (!key || reply.length < 80) return;
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -1304,19 +1340,27 @@ async function generateFollowUps(reply, layout) {
   } catch(e){}
 }
 function showSuggestions(items, layout) {
-  const view = document.getElementById(layout==='d'?'dChatView':'mChatView');
-  if (!view) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'sugg-wrap';
-  items.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'sugg-btn';
-    btn.textContent = s;
-    btn.onclick = () => { wrap.remove(); ask(s, layout); };
-    wrap.appendChild(btn);
+  // Show on BOTH views so it works regardless of layout
+  ['dChatView','mChatView'].forEach(vid => {
+    const view = document.getElementById(vid);
+    if (!view) return;
+    // Remove old suggestions
+    view.querySelectorAll('.sugg-wrap').forEach(el => el.remove());
+    const wrap = document.createElement('div');
+    wrap.className = 'sugg-wrap';
+    items.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'sugg-btn';
+      btn.textContent = s;
+      btn.onclick = () => {
+        document.querySelectorAll('.sugg-wrap').forEach(el=>el.remove());
+        ask(s, window.innerWidth>=768?'d':'m');
+      };
+      wrap.appendChild(btn);
+    });
+    view.appendChild(wrap);
+    view.scrollTop = view.scrollHeight;
   });
-  view.appendChild(wrap);
-  view.scrollTop = view.scrollHeight;
 }
 
 // ── IMAGE GENERATION ──────────────────────────────────────────
@@ -2334,6 +2378,9 @@ function rehearMsg(mid) {
 })();
 // ── DOM READY INIT ──
 function _domInit() {
+  // Unlock audio on first touch (iOS requirement)
+  document.addEventListener('touchstart', _unlockAudio, {once:true, passive:true});
+  document.addEventListener('click', _unlockAudio, {once:true, passive:true});
   loadTheme();
   syncWebSearch();
   // Pre-set OTP service keys
@@ -2357,6 +2404,7 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
 
 
 
