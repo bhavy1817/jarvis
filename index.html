@@ -60,7 +60,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--txt);overflow:
 @keyframes tdot{0%,80%,100%{transform:scale(.8);opacity:.5}40%{transform:scale(1.2);opacity:1}}
 
 /* ══ MOBILE ══ */
-#mApp{display:none;flex-direction:column;height:100vh}
+#mApp{display:none;flex-direction:column;height:100%;min-height:100vh;min-height:-webkit-fill-available;overflow:hidden}
 .mh{background:linear-gradient(180deg,rgba(14,5,0,.98),rgba(8,3,0,.95));border-bottom:1px solid var(--bd);padding:8px 12px;flex-shrink:0}
 .mh-r1{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .mh-logo{width:34px;height:38px;flex-shrink:0}
@@ -87,7 +87,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--txt);overflow:
 canvas#mWave{position:absolute;bottom:0;left:0;width:100%;height:50px;opacity:.6}
 
 /* MOBILE CHAT */
-.mc{flex:1;display:none;flex-direction:column;overflow:hidden}
+.mc{flex:1;display:none;flex-direction:column;overflow:hidden;min-height:0}
 .mc-view{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mc-view::-webkit-scrollbar{width:3px}.mc-view::-webkit-scrollbar-thumb{background:var(--r2)}
 
@@ -357,6 +357,14 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 .mode-toggle{display:flex;gap:0;margin-bottom:12px;border:1px solid rgba(192,57,43,.35);border-radius:3px;overflow:hidden}.mode-btn{flex:1;padding:9px 0;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1.5px;cursor:pointer;border:none;background:rgba(0,0,0,.4);color:rgba(255,255,255,.35);transition:all .25s}.mode-btn.active{background:rgba(192,57,43,.55);color:#fff}.mode-hint{text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;margin-bottom:10px;padding:5px;border-radius:2px}.email-hint{color:#2ecc71;background:rgba(46,204,113,.06)}.phone-hint{color:#f39c12;background:rgba(243,156,18,.06)}
+
+/* Mobile keyboard / safe area fixes */
+@supports (-webkit-touch-callout: none) {
+  #mApp { height: -webkit-fill-available; }
+}
+.mi-wrap { position:sticky; bottom:0; z-index:10; }
+.mc-view { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
 </style>
 </head>
 <body>
@@ -748,6 +756,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -838,14 +847,14 @@ function bootNext() {
           const mApp = document.getElementById('mApp');
           const dApp = document.getElementById('dApp');
           if (isDesktop) {
-            if (dApp) dApp.style.display = 'grid';
-            if (mApp) mApp.style.display = 'none';
+            if (dApp) { dApp.style.display = 'grid'; dApp.style.visibility = 'visible'; }
+            if (mApp) { mApp.style.display = 'none'; }
+            dSwitch('chat');
           } else {
-            if (mApp) mApp.style.display = 'flex';
-            if (dApp) dApp.style.display = 'none';
+            if (mApp) { mApp.style.display = 'flex'; mApp.style.flexDirection = 'column'; mApp.style.height = '100%'; mApp.style.visibility = 'visible'; }
+            if (dApp) { dApp.style.display = 'none'; }
+            mSwitch('chat');
           }
-          dSwitch('chat');
-          mSwitch('chat');
           const _dlb=document.getElementById('dLogoutBtn'),_mlb=document.getElementById('mLogoutBtn');
           if(_dlb)_dlb.style.display='inline-flex';
           if(_mlb)_mlb.style.display='inline-flex';
@@ -2386,6 +2395,7 @@ if (document.readyState === 'loading') {
 
 
 
+
 </script>
 
 <!-- ══════════ LOGIN / SIGNUP ══════════ -->
@@ -2490,3 +2500,4 @@ if (document.readyState === 'loading') {
 </div>
 </body>
 </html>
+
