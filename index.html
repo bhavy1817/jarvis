@@ -583,123 +583,114 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 </div>
 
 <!-- ══════════ SETTINGS ══════════ -->
-<div id="settOv">
+<div id="settOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
   <div class="sett-box">
-    <div class="sett-tl"></div>
     <div class="sett-hdr">
-      <span class="sett-ttl">⚙ JARVIS SETTINGS</span>
+      <span class="sett-title">⚙ SYSTEM SETTINGS</span>
       <button class="sett-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="sett-body">
-      <!-- API KEY -->
+
+      <!-- STATUS -->
       <div class="sett-sec">
-        <div class="sett-lbl">◆ API KEY <span style="color:var(--dim);font-size:7px">Groq — 14,400 free/day</span></div>
-        <div id="keySt" class="sett-st" style="margin-bottom:6px"></div>
-        <!-- LOCKED -->
-        <div id="apiLocked" style="display:none" class="lock-box">
-          <div class="lock-top">
-            <span style="font-size:15px">🔒</span>
-            <span style="font-size:11px;color:rgba(255,255,255,.55);flex:1">API key protected</span>
-            <button class="sett-btn blue" onclick="testKey()">TEST KEY</button>
-          </div>
-          <div class="lock-pin">
-            <input type="password" id="pinInp" maxlength="6" placeholder="Enter PIN to change key" class="sett-inp" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')unlockPin()">
-            <button class="sett-btn gold" onclick="unlockPin()">UNLOCK</button>
-          </div>
-          <div class="pin-err" id="pinErr"></div>
-        </div>
-        <!-- UNLOCKED -->
-        <div id="apiUnlocked" style="display:none" style="display:none">
-          <div style="font-size:9px;color:#2ecc71;font-family:'Orbitron',monospace;letter-spacing:1px;margin-bottom:7px">🔓 OWNER ACCESS</div>
-          <input type="password" id="apiKeyInp" class="sett-inp" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-          <div style="display:flex;gap:7px">
-            <button class="sett-btn gold" style="flex:1" onclick="saveApiKey()">SAVE KEY</button>
-            <button class="sett-btn blue" style="flex:1" onclick="testKey()">TEST</button>
-          </div>
-        </div>
-        <div id="apiSt" class="sett-st"></div>
-        <div style="font-size:9px;color:rgba(255,255,255,.2);margin-top:5px;font-family:'Share Tech Mono',monospace">Get free key → <a href="https://console.groq.com" target="_blank" style="color:var(--g3);text-decoration:none">console.groq.com</a></div>
+        <div class="sett-lbl">◆ STATUS</div>
+        <div id="keySt" class="sett-st" style="color:#2ecc71">✓ API key built-in — free for all users</div>
       </div>
+
       <!-- MODEL -->
       <div class="sett-sec">
         <div class="sett-lbl">◆ AI MODEL</div>
-        <select id="modelSel" class="sett-sel" onchange="saveModel()">
-          <option value="llama-3.3-70b-versatile">Llama 3.3 70B — Best ⚡ (Recommended)</option>
-          <option value="llama-3.1-8b-instant">Llama 3.1 8B — Fastest</option>
-          <option value="mixtral-8x7b-32768">Mixtral 8x7B — Creative</option>
-          <option value="gemma2-9b-it">Gemma 2 9B</option>
+        <select class="sett-inp" id="modelSel" onchange="localStorage.setItem('jModel',this.value);toast('Model updated')">
+          <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
+          <option value="llama-3.1-70b-versatile">Llama 3.1 70B</option>
+          <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+          <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
         </select>
       </div>
-      <!-- CHANGE PIN -->
-      <div class="sett-sec" id="changePinSec" style="display:none">
-        <div class="sett-lbl">◆ CHANGE PIN</div>
-        <input type="password" id="newPin1" class="sett-inp" placeholder="New PIN (4-6 digits)" maxlength="6">
-        <input type="password" id="newPin2" class="sett-inp" placeholder="Confirm new PIN" maxlength="6">
-        <button class="sett-btn gold" style="width:100%" onclick="changePin()">SAVE NEW PIN</button>
-        <div id="pinChSt" class="sett-st"></div>
-      </div>
-      <!-- FEATURES -->
+
+      <!-- PERSONA -->
       <div class="sett-sec">
-        <div class="sett-lbl">◆ FEATURES</div>
-        <div class="sett-row">
-          <div><div style="font-size:12px;color:rgba(255,255,255,.8)">Voice Response</div><div style="font-size:10px;color:var(--dim)">JARVIS speaks replies</div></div>
-          <div class="toggle" id="vrToggle" onclick="toggleVoiceResp()">
-            <div class="toggle-th" id="vrThumb"></div>
-          </div>
-        </div>
-        <div class="sett-row" style="border:none;padding-bottom:0">
-          <div><div style="font-size:12px;color:rgba(255,255,255,.8)">Clear History</div></div>
-          <button class="sett-btn red" onclick="clearHistory()">CLEAR</button>
+        <div class="sett-lbl">◆ PERSONA</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="p-btn on" onclick="setPersona('JARVIS')">JARVIS</button>
+          <button class="p-btn" onclick="setPersona('FRIDAY')">FRIDAY</button>
+          <button class="p-btn" onclick="setPersona('EDITH')">EDITH</button>
+          <button class="p-btn" onclick="setPersona('ULTRON')">ULTRON</button>
+          <button class="p-btn" onclick="setPersona('CUSTOM')">CUSTOM</button>
         </div>
       </div>
-      <!-- PWA -->
-      <div class="sett-sec">
-        <div class="sett-lbl">◆ INSTALL APP</div>
-        <button class="sett-btn gold pwa-btn" style="width:100%;display:none" onclick="installPWA()">📱 INSTALL JARVIS AS APP</button>
-        <div style="font-size:10px;color:var(--dim);font-family:'Share Tech Mono',monospace;margin-top:4px">Works on Chrome/Edge with HTTPS</div>
+
+      <!-- CUSTOM PERSONA -->
+      <div class="sett-sec" id="customPersonaSec" style="display:none">
+        <div class="sett-lbl">◆ CUSTOM PERSONA</div>
+        <textarea class="sett-inp" id="customPersonaInp" rows="3" placeholder="Describe your AI personality..." style="resize:vertical"></textarea>
+        <button class="sett-btn gold" style="width:100%;margin-top:6px" onclick="saveCustomPersona()">SAVE PERSONA</button>
       </div>
-            <!-- THEME -->
+
+      <!-- THEME -->
       <div class="sett-sec">
         <div class="sett-lbl">◆ THEME</div>
-        <div class="theme-bar">
-          <div class="theme-dot on" style="background:linear-gradient(#8b0000,#c0392b)" onclick="setTheme('red')" title="Stark Red"></div>
-          <div class="theme-dot" style="background:linear-gradient(#001a4d,#0066cc)" onclick="setTheme('blue')" title="Arc Blue"></div>
-          <div class="theme-dot" style="background:linear-gradient(#003300,#00aa44)" onclick="setTheme('green')" title="Matrix Green"></div>
-          <div class="theme-dot" style="background:linear-gradient(#111,#444)" onclick="setTheme('stealth')" title="Stealth Black"></div>
-          <div class="theme-dot" style="background:linear-gradient(#4a0080,#9900ff)" onclick="setTheme('purple')" title="Purple"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="sett-btn" onclick="setTheme('stark')">🔴 STARK RED</button>
+          <button class="sett-btn" onclick="setTheme('arc')">🔵 ARC BLUE</button>
+          <button class="sett-btn" onclick="setTheme('matrix')">🟢 MATRIX</button>
+          <button class="sett-btn" onclick="setTheme('stealth')">⚫ STEALTH</button>
+          <button class="sett-btn" onclick="setTheme('purple')">🟣 PURPLE</button>
         </div>
       </div>
-      <!-- CUSTOM PERSONA -->
+
+      <!-- VOICE -->
       <div class="sett-sec">
-        <div class="sett-lbl">◆ CUSTOM AI PERSONA</div>
-        <textarea class="custom-persona-inp" id="customPersonaTxt" placeholder="Describe your custom AI personality... e.g. 'You are a sarcastic genius who speaks like Sherlock Holmes'"></textarea>
-        <button class="sett-btn gold" style="width:100%;margin-top:6px" onclick="saveCustomPersona()">SAVE CUSTOM PERSONA</button>
+        <div class="sett-lbl">◆ VOICE RESPONSE</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="sett-btn" id="voiceRespBtn" onclick="toggleVoiceResp()">🔊 ENABLED</button>
+          <span style="font-size:9px;color:var(--dim);font-family:'Share Tech Mono',monospace">JARVIS speaks replies aloud</span>
+        </div>
       </div>
+
       <!-- WEB SEARCH -->
-      <div class="sett-sec">
-        <div class="sett-lbl">◆ FEATURES</div>
-        <div class="sett-row">
-          <div><div style="font-size:12px;color:rgba(255,255,255,.8)">Web Search Mode</div><div style="font-size:10px;color:var(--dim)">JARVIS searches web before answering</div></div>
-          <div class="toggle" id="wsToggle" onclick="toggleWebSearch()"><div class="toggle-th" id="wsThumb"></div></div>
-        </div>
-      </div>
       <div class="sett-sec">
         <div class="sett-lbl">◆ WEB SEARCH</div>
         <div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.2);border-radius:2px">
           <span style="font-size:16px">🌐</span>
-          <div><div style="font-size:11px;color:#2ecc71;font-family:'Share Tech Mono',monospace;letter-spacing:1px">ALWAYS ON</div><div style="font-size:9px;color:var(--dim);margin-top:2px">Real-time answers via web search</div></div>
+          <div><div style="font-size:11px;color:#2ecc71;font-family:'Share Tech Mono',monospace;letter-spacing:1px">ALWAYS ON</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px">Real-time answers via web search</div></div>
         </div>
       </div>
-      <div class="sett-sec" id="otpKeySec" style="display:none">
-        <div class="sett-lbl">◆ OTP SERVICE KEYS</div>
-        <input class="sett-inp" id="ejServiceInp" placeholder="EmailJS Service ID" style="margin-bottom:5px">
-        <input class="sett-inp" id="ejTemplateInp" placeholder="EmailJS Template ID" style="margin-bottom:5px">
-        <input class="sett-inp" id="ejPublicInp" placeholder="EmailJS Public Key" style="margin-bottom:5px">
-        <input class="sett-inp" id="f2sKeyInp" placeholder="Fast2SMS API Key" style="margin-bottom:5px">
-        <button class="sett-btn gold" style="width:100%;margin-top:4px" onclick="saveOTPKeys()">SAVE OTP KEYS</button>
-        <div id="otpKeySt" class="sett-st" style="margin-top:4px"></div>
+
+      <!-- OWNER PIN SECTION (hidden by default) -->
+      <div class="sett-sec">
+        <div class="sett-lbl">◆ OWNER ACCESS</div>
+        <div id="apiLocked" style="display:flex" class="lock-box">
+          <div class="lock-top">
+            <span style="font-size:15px">🔐</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.55);flex:1">Owner PIN required</span>
+            <button class="sett-btn blue" onclick="testKey()">TEST</button>
+          </div>
+          <div class="lock-pin">
+            <input type="password" id="pinInp" maxlength="6" placeholder="Enter owner PIN" class="sett-inp" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')unlockPin()">
+            <button class="sett-btn gold" onclick="unlockPin()">UNLOCK</button>
+          </div>
+          <div class="pin-err" id="pinErr"></div>
+        </div>
+        <div id="apiUnlocked" style="display:none">
+          <div id="savedKeyDisplay" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#2ecc71;margin-bottom:8px"></div>
+          <div id="changePinSec">
+            <div class="sett-lbl" style="margin-top:8px">◆ CHANGE PIN</div>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <input type="password" id="newPinInp" maxlength="6" placeholder="New PIN" class="sett-inp" style="margin:0;flex:1">
+              <button class="sett-btn gold" onclick="changePin()">SAVE</button>
+            </div>
+            <div id="pinChangeSt" class="sett-st" style="margin-top:4px"></div>
+          </div>
+        </div>
       </div>
-      <div class="sett-ftr">J.A.R.V.I.S · Groq + Llama 3.3 · Default PIN: 1817</div>
+
+      <div class="sett-ftr">
+        <button class="sett-btn red" onclick="clearHistory()">🗑 CLEAR CHAT</button>
+        <button class="sett-btn" onclick="exportChat()">📤 EXPORT</button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -742,6 +733,8 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+
+
 
 
 
@@ -1248,10 +1241,9 @@ async function ask(input, layout) {
         ? '⚠ Local file detected, sir. Browser blocks API calls from local files. Please upload to Vercel.com to use JARVIS.'
         : 'Network error, sir. Please check your internet connection.';
     } else if (err.message.includes('401') || err.message.toLowerCase().includes('invalid')) {
-      reply = 'Invalid API key, sir. Go to Settings ⚙ → PIN 1817 → Unlock → paste a fresh key from console.groq.com';
-      setTimeout(openSettings, 1000);
+      reply = 'Authentication error, sir. Please try again.';
     } else if (err.message.includes('429') || err.message.includes('rate')) {
-      reply = 'Rate limit reached, sir. Please wait 30 seconds and try again.';
+      reply = 'Service is busy right now, sir. Please wait a moment and try again.';
     } else {
       reply = 'Error: ' + err.message;
     }
@@ -1566,16 +1558,12 @@ function setLockState(locked) {
   const L=document.getElementById('apiLocked');
   const U=document.getElementById('apiUnlocked');
   const C=document.getElementById('changePinSec');
-  const O=document.getElementById('otpKeySec');
   if(L) L.style.display=locked?'flex':'none';
   if(U) U.style.display=locked?'none':'block';
   if(C) C.style.display=locked?'none':'block';
-  if(O) O.style.display=locked?'none':'block';
   if(!locked){
-    // Show current key status
     const disp=document.getElementById('savedKeyDisplay');
-    if(disp){ disp.style.display='block'; disp.style.color='#2ecc71'; disp.textContent='🔒 API key secured on Vercel server — users never see it'; }
-    loadOTPKeyFields();
+    if(disp){disp.textContent='✓ Owner access granted';disp.style.color='#2ecc71';}
   }
 }
 function unlockPin() {
@@ -1583,7 +1571,7 @@ function unlockPin() {
   const pin=localStorage.getItem('jPin')||'1817';
   const pe=document.getElementById('pinErr');
   if(v===pin){_unlocked=true;setLockState(false);toast('🔓 OWNER ACCESS');document.getElementById('otpKeySec')?.style && (document.getElementById('otpKeySec').style.display='block');loadOTPKeyFields();}
-  else{if(pe)pe.textContent='✗ Wrong PIN — default is 1817';const pi=document.getElementById('pinInp');if(pi)pi.value='';}
+  else{if(pe)pe.textContent='✗ Wrong PIN';const pi=document.getElementById('pinInp');if(pi)pi.value='';}
 }
 function saveApiKey() {
   const v=(document.getElementById('apiKeyInp')?.value||'').trim();
@@ -2369,6 +2357,8 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
+
 
 
 
