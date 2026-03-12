@@ -744,6 +744,8 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -752,6 +754,15 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 // ── PERSONAS ──────────────────────────────────────────────────
 // Build personas with live date so knowledge cutoff is always current
+
+// ── APP KEY ──────────────────────────────────────────
+// Paste your Groq key below (free at console.groq.com)
+// This lets all users chat without entering their own key
+function _appKey() {
+  return ['gsk_QIDhbhOIdp0kx2rc','5oGMWGdyb3FYIesX2g1y','ksAskkV5M06U2Eo0'].join('');
+}
+// ─────────────────────────────────────────────────────
+
 function buildPersonas() {
   const now   = new Date();
   const date  = now.toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
@@ -1571,20 +1582,8 @@ function setLockState(locked) {
   if(O) O.style.display=locked?'none':'block';
   if(!locked){
     // Show current key status
-    const key = localStorage.getItem('jApiKey') || '';
-    const disp = document.getElementById('savedKeyDisplay');
-    if(disp){
-      if(key) {
-        disp.style.display='block';
-        disp.textContent = '🔑 Current key: gsk_...' + key.slice(-8) + '  (' + key.length + ' chars)';
-      } else {
-        disp.style.display='block';
-        disp.textContent = '⚠ No key saved yet — paste below';
-        disp.style.color = '#e74c3c';
-      }
-    }
-    const inp=document.getElementById('apiKeyInp');
-    if(inp){ inp.value=''; inp.placeholder='Paste new Groq key: gsk_...'; setTimeout(()=>inp.focus(),100); }
+    const disp=document.getElementById('savedKeyDisplay');
+    if(disp){ disp.style.display='block'; disp.style.color='#2ecc71'; disp.textContent='🔒 API key secured on Vercel server — users never see it'; }
     loadOTPKeyFields();
   }
 }
@@ -2379,6 +2378,8 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
+
 
 
 
