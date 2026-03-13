@@ -778,6 +778,8 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -1034,11 +1036,11 @@ function loadWeather() {
 // ── SPEAK ──────────────────────────────────────────────────────
 // Per-persona voice profiles (pitch, rate, preferred language)
 const PVOX = {
-  JARVIS: {pitch:0.75, rate:0.93, lang:'en-GB'},  // Deep British male
-  FRIDAY: {pitch:1.18, rate:1.06, lang:'en-IE'},  // Warm Irish female
-  EDITH:  {pitch:0.55, rate:0.88, lang:'en-US'},  // Cold US female
-  ULTRON: {pitch:0.28, rate:0.76, lang:'en-GB'},  // Ominous deep male
-  CUSTOM: {pitch:1.0,  rate:1.0,  lang:'en'},
+  JARVIS: {pitch:0.8,  rate:0.9,  lang:'en-GB'},
+  FRIDAY: {pitch:1.2,  rate:1.05, lang:'en-US'},
+  EDITH:  {pitch:0.6,  rate:0.88, lang:'en-US'},
+  ULTRON: {pitch:0.3,  rate:0.75, lang:'en-GB'},
+  CUSTOM: {pitch:1.0,  rate:1.0,  lang:'en-US'},
 };
 // Last spoken text for rehear button
 let _lastSpoken = '';
@@ -1079,32 +1081,19 @@ function _loadVoices() {
 }
 
 function _pickVoice(voices) {
-  // Priority order — most natural sounding voices across all platforms
-  const isFemale = currentPersona === 'FRIDAY' || currentPersona === 'EDITH';
+  const isFemale = currentPersona==='FRIDAY' || currentPersona==='EDITH';
   const pv = PVOX[currentPersona] || PVOX.JARVIS;
-
-  // Named voice priority list (best across Chrome desktop, Android, iOS)
-  const maleNames   = ['Google UK English Male','Daniel','Arthur','Microsoft George','en-GB-Standard-B','en-GB-Wavenet-B'];
-  const femaleNames = ['Google UK English Female','Karen','Moira','Samantha','Google US English','Microsoft Zira','en-US-Standard-C'];
-  const priority    = isFemale ? femaleNames : maleNames;
-
-  // 1. Try exact named voice
-  for (const name of priority) {
-    const v = voices.find(v => v.name === name);
-    if (v) return v;
-  }
-  // 2. Try partial name match
-  for (const name of priority) {
-    const v = voices.find(v => v.name.includes(name.split(' ').pop()));
-    if (v) return v;
-  }
-  // 3. Try lang match
-  let v = voices.find(v => v.lang === pv.lang);
-  if (v) return v;
-  v = voices.find(v => v.lang.startsWith(pv.lang.slice(0,5)));
-  if (v) return v;
-  // 4. Any English
-  v = voices.find(v => v.lang.startsWith('en'));
+  // Best named voices per platform
+  const male   = ['Google UK English Male','Daniel','Arthur','Google US English Male','Microsoft David','Samson'];
+  const female = ['Google UK English Female','Samantha','Karen','Google US English','Microsoft Zira','Victoria'];
+  const want   = isFemale ? female : male;
+  let v = null;
+  for (const n of want) { v = voices.find(x=>x.name===n); if(v) break; }
+  if (!v) for (const n of want) { v = voices.find(x=>x.name.toLowerCase().includes(n.split(' ').slice(-1)[0].toLowerCase())); if(v) break; }
+  if (!v) v = voices.find(x=>x.lang.startsWith(pv.lang));
+  if (!v) v = voices.find(x=>x.lang.startsWith('en-GB'));
+  if (!v) v = voices.find(x=>x.lang.startsWith('en'));
+  console.log('Voice picked:', v?.name, '| persona:', currentPersona, '| available:', voices.map(x=>x.name).join(', '));
   return v || null;
 }
 
@@ -1115,7 +1104,8 @@ function speakOut(text) {
   const clean = text.replace(/[*#`>_~\[\]]/g,'').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim();
   if (!clean) return;
   _lastSpoken = clean;
-  _speakChunked(clean);
+  // Wait a tick after cancel before speaking (required on iOS/Android)
+  setTimeout(() => _speakChunked(clean), 150);
 }
 
 function _speakChunked(text) {
@@ -1277,14 +1267,16 @@ function hideTyping() {
 async function ask(input, layout) {
   if (!layout) layout = window.innerWidth >= 768 ? 'd' : 'm';
 
-  // Route check
-  const cr = route(input);
-  if (cr === '__IMG__') return;
-  if (cr) {
-    addChat(input, 'u', layout);
-    addChat(cr, 'j', layout);
-    try { speakOut(cr); } catch(e){}
-    return;
+  // Route check — skip if file attached (file questions go to AI)
+  if (!attachedFile) {
+    const cr = route(input);
+    if (cr === '__IMG__') return;
+    if (cr) {
+      addChat(input, 'u', layout);
+      addChat(cr, 'j', layout);
+      try { speakOut(cr); } catch(e){}
+      return;
+    }
   }
 
   // Use saved key or built-in app key
@@ -1310,8 +1302,11 @@ async function ask(input, layout) {
 
   let reply = '';
   try {
-    const model    = attachedFile?.type === 'image' ? 'llama-3.2-11b-vision-preview' : (localStorage.getItem('jModel') || 'llama-3.3-70b-versatile');
-    console.log('Using model:', model, '| Key starts:', key.slice(0,15));
+    // Select model: vision for images, text for everything else
+    let model = localStorage.getItem('jModel') || 'llama-3.3-70b-versatile';
+    if (attachedFile?.type === 'image') {
+      model = 'meta-llama/llama-4-scout-17b-16e-instruct'; // best vision on Groq
+    }
     PERSONAS = buildPersonas(); // refresh date on every call
     const _p = PERSONAS[currentPersona] || PERSONAS.JARVIS;
 
@@ -1553,24 +1548,15 @@ function startListen(layout) {
     }
   }
 
-  // Request mic permission explicitly on mobile before starting
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        micStream = stream;
-        startWave(stream, layout);
-        _go();
-      })
-      .catch(err => {
-        console.warn('getUserMedia failed:', err.name);
-        if (err.name === 'NotAllowedError') {
-          toast('🔒 Allow microphone access to use voice mode');
-        } else {
-          // Try anyway — some mobile browsers support SR without getUserMedia
-          _go();
-        }
-      });
+  // On mobile: just start SR directly — getUserMedia conflicts with SpeechRecognition
+  // SR handles its own mic permission internally
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile && navigator.mediaDevices?.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({audio:true})
+      .then(stream => { micStream=stream; startWave(stream, layout); _go(); })
+      .catch(() => _go());
   } else {
+    // Mobile: go straight to SR, it will prompt for mic itself
     _go();
   }
 }
@@ -1629,10 +1615,17 @@ async function handleFile(evt, layout) {
       const b64 = await toBase64(file);
       attachedFile={type:'image', data:b64, name:file.name, mimeType:file.type};
       showAttPreview(layout, file.name, 'image', b64);
+      // Pre-fill input with helpful prompt
+      const inp = document.getElementById(layout==='d'?'dInp':'mInp');
+      if (inp && !inp.value) inp.value = 'Describe everything you see in this image in detail.';
     } else {
+      toast('📄 Reading ' + (file.type==='application/pdf'?'PDF':'file') + '...');
       const txt = await toText(file);
       attachedFile={type:'text', data:txt, name:file.name, mimeType:file.type};
       showAttPreview(layout, file.name, 'doc', null);
+      // Pre-fill input
+      const inp = document.getElementById(layout==='d'?'dInp':'mInp');
+      if (inp && !inp.value) inp.value = 'Please explain and summarize this document.';
     }
     document.getElementById(layout==='d'?'dAttBtn':'mAttBtn')?.classList.add('on');
     document.getElementById(layout==='d'?'dInp':'mInp')?.focus();
@@ -1642,8 +1635,48 @@ async function handleFile(evt, layout) {
 function toBase64(file) {
   return new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=()=>rej(); r.readAsDataURL(file); });
 }
-function toText(file) {
-  return new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(); r.readAsText(file); });
+async function toText(file) {
+  // PDF: use PDF.js to extract real text
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+    return await _extractPdfText(file);
+  }
+  // All other text files: read directly
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result);
+    r.onerror = () => rej(new Error('Could not read file'));
+    r.readAsText(file);
+  });
+}
+
+async function _extractPdfText(file) {
+  try {
+    // Load PDF.js from CDN if not already loaded
+    if (!window.pdfjsLib) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const ab    = await file.arrayBuffer();
+    const pdf   = await window.pdfjsLib.getDocument({data: ab}).promise;
+    let text    = '';
+    const total = Math.min(pdf.numPages, 20); // cap at 20 pages
+    for (let i = 1; i <= total; i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(s => s.str).join(' ') + '\n';
+    }
+    if (pdf.numPages > 20) text += `\n[Note: showing first 20 of ${pdf.numPages} pages]`;
+    return text.trim() || '[PDF has no extractable text — may be a scanned image]';
+  } catch(e) {
+    console.warn('PDF.js failed:', e);
+    return '[Could not extract PDF text: ' + e.message + ']';
+  }
 }
 function showAttPreview(layout, name, type, b64) {
   const isD = layout==='d';
@@ -2287,8 +2320,9 @@ async function snapCamera() {
   closeCamera();
   dSwitch('chat'); mSwitch('chat');
   if(st) st.textContent='📸 Captured!';
-  toast('📸 Snap attached — describe what to do or just send!');
-  document.getElementById(layout==='d'?'dInp':'mInp')?.focus();
+  toast('📸 Analysing image...');
+  // Auto-analyse the captured image immediately
+  setTimeout(() => ask('What do you see in this image? Describe everything in detail.', layout), 400);
 }
 document.getElementById('camOv')?.addEventListener('click',e=>{ if(e.target===document.getElementById('camOv')) closeCamera(); });
 
@@ -2583,6 +2617,8 @@ if (document.readyState === 'loading') {
 
 
 
+
+
 </script>
 
 <!-- ══════════ LOGIN / SIGNUP ══════════ -->
@@ -2687,3 +2723,4 @@ if (document.readyState === 'loading') {
 </div>
 </body>
 </html>
+
