@@ -757,6 +757,9 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -770,8 +773,10 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 // Paste your Groq key below (free at console.groq.com)
 // This lets all users chat without entering their own key
 function _appKey() {
-  const p=['gsk_QIDhbhOIdp0kx2rc','5oGMWGdyb3FYIesX2g1y','ksAskkV5M06U2Eo0'];
-  return p.join('').replace(/\s/g,'');
+  const a='gsk_bEt1X6UdqZkWXamn';
+  const b='3B4LWGdyb3FYsInhRnsR';
+  const c='OeduhysUq0PTmIE8';
+  return (a+b+c).trim();
 }
 // ─────────────────────────────────────────────────────
 
@@ -1266,26 +1271,21 @@ async function ask(input, layout) {
     const sysText = _p + (RMODE_HINT[responseMode] ? ' ' + RMODE_HINT[responseMode] : '') + _wsHint
       + (webContext ? '\n\n=== LIVE WEB DATA ===\n' + webContext + '\n=== END WEB DATA ===' : '');
     const messages = buildMessages(input, sysText);
-    const reqBody = {model, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7};
-    const r = await fetch('/api/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(reqBody)
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key
+      },
+      body: JSON.stringify({model, messages, max_tokens:RMODE_TOKENS[responseMode]||800, temperature:0.7})
     });
-    const t = await r.text();
-    let data; try { data=JSON.parse(t); } catch(e){ throw new Error('Bad response: '+t.slice(0,80)); }
-    if (!r.ok || data.error) throw new Error(data.error?.message||'HTTP '+r.status);
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error?.message || 'HTTP ' + r.status);
     reply = data.choices?.[0]?.message?.content || '';
     aiHistory.push({role:'assistant', content:reply});
     if (attachedFile) setTimeout(() => clearFile(layout==='d'?'d':'m'), 500);
   } catch(err) {
-    if (err.message.includes('429') || err.message.includes('rate')) {
-      reply = 'Too many requests, sir. Please wait a moment.';
-    } else if (err.message.includes('Network') || err.message.includes('fetch')) {
-      reply = 'Network error, sir. Check your connection.';
-    } else {
-      reply = '⚠ ' + err.message;
-    }
+    reply = '⚠ ' + err.message;
     console.error('JARVIS error:', err.message);
   } finally {
     busy = false;
@@ -1325,9 +1325,9 @@ async function generateFollowUps(reply, layout) {
   const key = localStorage.getItem('jApiKey') || _appKey();
   if (!key || reply.length < 80) return;
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
       body: JSON.stringify({
         model:'llama-3.1-8b-instant',
         messages:[
@@ -2382,6 +2382,13 @@ function rehearMsg(mid) {
 })();
 // ── DOM READY INIT ──
 function _domInit() {
+  // Clear old invalid key if saved, force fresh built-in key
+  const saved = localStorage.getItem('jApiKey');
+  if (saved && saved !== _appKey()) {
+    // Keep user's manually saved key only if different from old embedded key
+    const oldKey = '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';
+    if (saved === oldKey) localStorage.removeItem('jApiKey');
+  }
   // Unlock audio on first touch (iOS requirement)
   document.addEventListener('touchstart', _unlockAudio, {once:true, passive:true});
   document.addEventListener('click', _unlockAudio, {once:true, passive:true});
@@ -2408,6 +2415,9 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
+
+
 
 
 
