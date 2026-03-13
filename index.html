@@ -365,6 +365,11 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 .mi-wrap { position:sticky; bottom:0; z-index:10; }
 .mc-view { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
 
+
+/* Mobile Voice Mode */
+#mVoice{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;overflow:hidden}
+#mWave{width:100%;max-width:340px;height:50px;opacity:.8}
+.mv-mic.on{background:radial-gradient(circle,#c0392b,#7b0000);box-shadow:0 0 50px rgba(231,76,60,.7);transform:scale(1.08)}
 </style>
 </head>
 <body>
@@ -440,7 +445,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
   </div>
 
   <!-- MOBILE VOICE -->
-  <div class="mv" id="mVoice" style="display:none">
+  <div class="mv" id="mVoice" style="display:none;flex-direction:column;align-items:center;justify-content:center">
     <canvas id="mWave" height="50"></canvas>
     <button class="mv-mic" id="mMicBtn" onclick="toggleVoice('m')">
       <div class="mv-mic-icon" id="mMicIcon">🎤</div>
@@ -760,6 +765,9 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -933,6 +941,8 @@ function mSwitch(mode) {
   const bv = document.getElementById('mBtnV');
   if (bc) bc.classList.toggle('on', chat);
   if (bv) bv.classList.toggle('on', !chat);
+  // Stop listening when switching back to chat
+  if (chat && listening) stopListen();
 }
 function dSwitch(mode) {
   const chat = mode === 'chat';
@@ -1029,70 +1039,112 @@ let _audioUnlocked = false;
 function _unlockAudio() {
   if (_audioUnlocked) return;
   _audioUnlocked = true;
-  // Speak silent utterance to unlock audio on iOS
   if (window.speechSynthesis) {
     const u = new SpeechSynthesisUtterance('');
     u.volume = 0;
     window.speechSynthesis.speak(u);
   }
 }
+
+// ── Voice cache — loaded once, reused ──
+let _voiceCache = null;
+let _voicesReady = false;
+
+function _loadVoices() {
+  return new Promise(resolve => {
+    const list = window.speechSynthesis.getVoices();
+    if (list.length > 0) { _voiceCache = list; _voicesReady = true; resolve(list); return; }
+    window.speechSynthesis.onvoiceschanged = () => {
+      _voiceCache = window.speechSynthesis.getVoices();
+      _voicesReady = true;
+      resolve(_voiceCache);
+    };
+    // Hard fallback for devices that never fire onvoiceschanged
+    setTimeout(() => {
+      _voiceCache = window.speechSynthesis.getVoices();
+      _voicesReady = true;
+      resolve(_voiceCache);
+    }, 2000);
+  });
+}
+
+function _pickVoice(voices) {
+  // Priority order — most natural sounding voices across all platforms
+  const isFemale = currentPersona === 'FRIDAY' || currentPersona === 'EDITH';
+  const pv = PVOX[currentPersona] || PVOX.JARVIS;
+
+  // Named voice priority list (best across Chrome desktop, Android, iOS)
+  const maleNames   = ['Google UK English Male','Daniel','Arthur','Microsoft George','en-GB-Standard-B','en-GB-Wavenet-B'];
+  const femaleNames = ['Google UK English Female','Karen','Moira','Samantha','Google US English','Microsoft Zira','en-US-Standard-C'];
+  const priority    = isFemale ? femaleNames : maleNames;
+
+  // 1. Try exact named voice
+  for (const name of priority) {
+    const v = voices.find(v => v.name === name);
+    if (v) return v;
+  }
+  // 2. Try partial name match
+  for (const name of priority) {
+    const v = voices.find(v => v.name.includes(name.split(' ').pop()));
+    if (v) return v;
+  }
+  // 3. Try lang match
+  let v = voices.find(v => v.lang === pv.lang);
+  if (v) return v;
+  v = voices.find(v => v.lang.startsWith(pv.lang.slice(0,5)));
+  if (v) return v;
+  // 4. Any English
+  v = voices.find(v => v.lang.startsWith('en'));
+  return v || null;
+}
+
 function speakOut(text) {
   if (!voiceRespOn || !window.speechSynthesis) return;
   _unlockAudio();
-  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.cancel();
-  // Clean markdown symbols
-  const clean = text.replace(/[*#`>_~]/g,'').replace(/\s+/g,' ').trim();
-  _lastSpoken  = clean;
+  const clean = text.replace(/[*#`>_~\[\]]/g,'').replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').trim();
+  if (!clean) return;
+  _lastSpoken = clean;
   _speakChunked(clean);
 }
 
 function _speakChunked(text) {
   if (!text || !window.speechSynthesis) return;
-  const chunks = text.match(/[^.!?]+[.!?]*/g) || [text];
-  const pv     = PVOX[currentPersona] || PVOX.JARVIS;
+  const pv = PVOX[currentPersona] || PVOX.JARVIS;
 
   function _doSpeak(voices) {
-    // Pick best matching voice for persona
-    let voice = null;
-    const isFemale = currentPersona==='FRIDAY' || currentPersona==='EDITH';
-    // Try exact lang + gender match
-    voice = voices.find(v => v.lang.startsWith(pv.lang) && v.name.toLowerCase().includes(isFemale?'female':'male'));
-    // Try lang only
-    if (!voice) voice = voices.find(v => v.lang.startsWith(pv.lang));
-    // Try any English
-    if (!voice) voice = voices.find(v => v.lang.startsWith('en-GB'));
-    if (!voice) voice = voices.find(v => v.lang.startsWith('en'));
+    const voice  = _pickVoice(voices);
+    // Split smartly: sentences, but not too short (avoid choppy gaps)
+    const chunks = text.match(/[^.!?\n]{1,200}[.!?\n]*/g) || [text];
 
-    chunks.forEach(chunk => {
-      const c = chunk.trim();
-      if (!c) return;
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Queue all chunks — use onend to chain them to avoid mobile buffer issues
+    let idx = 0;
+    function speakNext() {
+      if (idx >= chunks.length) return;
+      const c = chunks[idx++].trim();
+      if (!c) { speakNext(); return; }
       const u = new SpeechSynthesisUtterance(c);
       u.pitch  = pv.pitch;
       u.rate   = pv.rate;
       u.volume = 1;
       if (voice) u.voice = voice;
+      u.onend  = speakNext;
+      u.onerror = speakNext; // skip errors, continue
       window.speechSynthesis.speak(u);
-    });
+    }
+    speakNext();
   }
 
-  // Mobile: voices load asynchronously — wait if not ready
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    _doSpeak(voices);
+  if (_voicesReady && _voiceCache && _voiceCache.length > 0) {
+    _doSpeak(_voiceCache);
   } else {
-    // Wait for voices to load (mobile Safari/Chrome)
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.onvoiceschanged = null;
-      _doSpeak(window.speechSynthesis.getVoices());
-    };
-    // Fallback: try after 1s even if event doesn't fire
-    setTimeout(() => {
-      const v2 = window.speechSynthesis.getVoices();
-      if (v2.length > 0) _doSpeak(v2);
-    }, 1000);
+    _loadVoices().then(_doSpeak);
   }
 }
+
 
 function rehearLast() {
   if (!_lastSpoken) { toast('⚠ Nothing to rehear yet'); return; }
@@ -1424,38 +1476,90 @@ function toggleVoice(layout) {
 }
 function startListen(layout) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { toast('Voice needs Chrome or Edge'); return; }
-  if (recog) { try{recog.stop();}catch(e){} recog=null; }
-  const go = () => {
+  if (!SR) { toast('🎤 Voice needs Chrome browser'); return; }
+
+  // Stop any existing session first
+  if (recog) { try { recog.stop(); } catch(e){} recog = null; }
+
+  function _go() {
     recog = new SR();
-    recog.lang='en-US'; recog.interimResults=true; recog.continuous=false;
+    recog.lang            = 'en-US';
+    recog.interimResults  = true;
+    recog.continuous      = false; // false = more reliable on mobile
+    recog.maxAlternatives = 1;
+
     recog.onstart = () => {
-      listening=true;
+      listening = true;
       setMicState(layout, true);
-      setStatus('LISTENING','#e74c3c');
-      ['mSbars','dSbars'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.remove('idle');});
+      setStatus('LISTENING', '#e74c3c');
+      ['mSbars','dSbars'].forEach(id => {
+        const e = document.getElementById(id);
+        if (e) e.classList.remove('idle');
+      });
       toast('🎤 SPEAK NOW');
     };
+
     recog.onresult = e => {
-      let final='', interim='';
-      for (let i=e.resultIndex;i<e.results.length;i++) {
-        if (e.results[i].isFinal) final+=e.results[i][0].transcript;
-        else interim+=e.results[i][0].transcript;
+      let final = '', interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
       }
-      const shown=final||interim;
-      const ip=document.getElementById(layout==='d'?'dInpPanel':'mInpPanel');
-      if(ip) ip.textContent=shown;
-      if (final) { stopListen(); ask(final.trim(), layout); }
+      const shown = final || interim;
+      // Show interim text in input panel
+      const ip = document.getElementById(layout === 'd' ? 'dInpPanel' : 'mInpPanel');
+      if (ip) ip.textContent = shown;
+      // Also mirror to text input so user can see
+      const inp = document.getElementById(layout === 'd' ? 'dInp' : 'mInp');
+      if (inp && shown) inp.value = shown;
+      if (final) {
+        stopListen();
+        ask(final.trim(), layout);
+        if (inp) inp.value = '';
+      }
     };
-    recog.onerror = e => { stopListen(); if(e.error!=='aborted') toast('Voice: '+e.error); };
-    recog.onend   = () => { if(listening) stopListen(); };
-    try { recog.start(); } catch(e) { toast('Voice error: '+e.message); }
-  };
-  if (navigator.mediaDevices?.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({audio:true})
-      .then(stream => { micStream=stream; startWave(stream, layout); go(); })
-      .catch(err => { if(err.name==='NotAllowedError') toast('🔒 Allow mic access'); else go(); });
-  } else { go(); }
+
+    recog.onerror = e => {
+      console.warn('Speech error:', e.error);
+      stopListen();
+      if (e.error === 'not-allowed') toast('🔒 Mic blocked — allow in browser settings');
+      else if (e.error === 'network') toast('🌐 Voice needs internet connection');
+      else if (e.error !== 'aborted' && e.error !== 'no-speech') toast('Voice: ' + e.error);
+    };
+
+    recog.onend = () => {
+      if (listening) stopListen();
+    };
+
+    try {
+      recog.start();
+    } catch(e) {
+      console.error('recog.start failed:', e);
+      toast('Voice error: ' + e.message);
+      stopListen();
+    }
+  }
+
+  // Request mic permission explicitly on mobile before starting
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        micStream = stream;
+        startWave(stream, layout);
+        _go();
+      })
+      .catch(err => {
+        console.warn('getUserMedia failed:', err.name);
+        if (err.name === 'NotAllowedError') {
+          toast('🔒 Allow microphone access to use voice mode');
+        } else {
+          // Try anyway — some mobile browsers support SR without getUserMedia
+          _go();
+        }
+      });
+  } else {
+    _go();
+  }
 }
 function stopListen() {
   listening=false;
@@ -2415,6 +2519,9 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
+
+
 
 
 
