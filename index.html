@@ -87,7 +87,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--txt);overflow:
 canvas#mWave{position:absolute;bottom:0;left:0;width:100%;height:50px;opacity:.6}
 
 /* MOBILE CHAT */
-.mc{flex:1;display:none;flex-direction:column;overflow:hidden;min-height:0}
+.mc{flex:1;flex-direction:column;overflow:hidden;min-height:0}
 .mc-view{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .mc-view::-webkit-scrollbar{width:3px}.mc-view::-webkit-scrollbar-thumb{background:var(--r2)}
 
@@ -367,7 +367,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 /* Mobile Voice Mode */
-#mVoice{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;overflow:hidden}
+#mVoice{flex:1;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;overflow:hidden}
 #mWave{width:100%;max-width:340px;height:50px;opacity:.8}
 .mv-mic.on{background:radial-gradient(circle,#c0392b,#7b0000);box-shadow:0 0 50px rgba(231,76,60,.7);transform:scale(1.08)}
 </style>
@@ -422,6 +422,13 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
   <!-- MOBILE CHAT (default) -->
   <div class="mc" id="mChat" style="display:flex">
+    <!-- Persona bar for mobile -->
+    <div style="display:flex;gap:5px;padding:5px 10px;background:rgba(0,0,0,.3);border-bottom:1px solid var(--bd);overflow-x:auto;flex-shrink:0">
+      <button class="p-btn on" id="mp_JARVIS" onclick="setPersona('JARVIS')">⚡ JARVIS</button>
+      <button class="p-btn" id="mp_FRIDAY" onclick="setPersona('FRIDAY')">🌐 FRIDAY</button>
+      <button class="p-btn" id="mp_EDITH" onclick="setPersona('EDITH')">👁 EDITH</button>
+      <button class="p-btn" id="mp_ULTRON" onclick="setPersona('ULTRON')">💀 ULTRON</button>
+    </div>
     <div class="mc-view" id="mChatView"></div>
     <div class="mi-wrap">
       <div class="rmode-bar" style="padding:5px 10px 0">
@@ -445,14 +452,14 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
   </div>
 
   <!-- MOBILE VOICE -->
-  <div class="mv" id="mVoice" style="display:none;flex-direction:column;align-items:center;justify-content:center">
-    <canvas id="mWave" height="50"></canvas>
+  <div id="mVoice" style="display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:20px;padding:20px">
+    <canvas id="mWave" width="300" height="50" style="width:100%;max-width:320px"></canvas>
     <button class="mv-mic" id="mMicBtn" onclick="toggleVoice('m')">
       <div class="mv-mic-icon" id="mMicIcon">🎤</div>
       <div class="mv-mic-label" id="mMicLabel">TAP TO SPEAK</div>
     </button>
     <div style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--g4);margin-top:16px;text-align:center;max-width:90%;min-height:20px" id="mInpPanel"></div>
-    <div style="font-size:14px;line-height:1.5;color:var(--txt);text-align:center;max-width:90%;margin-top:8px;max-height:120px;overflow-y:auto" id="mResTxt"></div>
+    <div style="font-size:14px;line-height:1.5;color:var(--txt);text-align:center;max-width:90%;margin-top:8px;max-height:120px;overflow-y:auto" id="mResTxt" style="font-size:13px;line-height:1.6;color:var(--txt);text-align:center;max-width:90%;margin-top:8px;max-height:180px;overflow-y:auto;background:rgba(0,0,0,.3);padding:10px;border-radius:4px;border:1px solid var(--bd);min-height:40px"></div>
   </div>
 
   <div class="mt"><div class="mt-inner" id="mTicker">JARVIS ONLINE · SAY "HEY JARVIS" TO ACTIVATE · TYPE ANY COMMAND · ATTACH FILES WITH 📎 · PIN: 1817</div></div>
@@ -738,6 +745,9 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+
+
+
 
 
 
@@ -1347,8 +1357,11 @@ async function ask(input, layout) {
 
   hideTyping();
   addChat(reply, 'j', layout);
-  const rt = document.getElementById(layout==='d' ? 'dResTxt' : 'mResTxt');
-  if (rt) rt.textContent = reply.slice(0,200);
+  // Update result panels for both voice modes
+  const drt = document.getElementById('dResTxt');
+  const mrt = document.getElementById('mResTxt');
+  if (drt) drt.textContent = reply.slice(0,200);
+  if (mrt) mrt.textContent = reply.slice(0,200);
   try { speakOut(reply); } catch(e){}
   if (responseMode !== 'quick') setTimeout(() => generateFollowUps(reply, layout), 500);
 }
@@ -1686,6 +1699,13 @@ function setPersona(name) {
   currentPersona=name;
   document.querySelectorAll('.p-btn').forEach(b => b.classList.toggle('on', b.textContent.includes(name)));
   toast('PERSONA: '+name);
+  // Also sync mobile persona buttons
+  ['JARVIS','FRIDAY','EDITH','ULTRON','CUSTOM'].forEach(n => {
+    const mb = document.getElementById('mp_'+n);
+    if (mb) mb.classList.toggle('on', n===name);
+  });
+  localStorage.setItem('jPersona', name);
+  toast('Persona: '+name);
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────
@@ -2486,6 +2506,17 @@ function rehearMsg(mid) {
 })();
 // ── DOM READY INIT ──
 function _domInit() {
+  // Preload voices immediately so they're ready when needed (mobile fix)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      _voiceCache = window.speechSynthesis.getVoices();
+      _voicesReady = true;
+    };
+  }
+  // Restore saved persona
+  const savedPersona = localStorage.getItem('jPersona');
+  if (savedPersona) setTimeout(() => setPersona(savedPersona), 100);
   // Clear old invalid key if saved, force fresh built-in key
   const saved = localStorage.getItem('jApiKey');
   if (saved && saved !== _appKey()) {
@@ -2519,6 +2550,9 @@ if (document.readyState === 'loading') {
 } else {
   _domInit();
 }
+
+
+
 
 
 
