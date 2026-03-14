@@ -370,6 +370,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 #mVoice{flex:1;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;overflow:hidden}
 #mWave{width:100%;max-width:340px;height:50px;opacity:.8}
 .mv-mic.on{background:radial-gradient(circle,#c0392b,#7b0000);box-shadow:0 0 50px rgba(231,76,60,.7);transform:scale(1.08)}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -412,7 +413,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
     <div class="mh-r2">
       <div class="sbars idle" id="mSbars"><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div><div class="sb"></div></div>
       <div class="mh-status" id="mStatus">● STANDBY</div>
-      <div class="mh-time" id="mTime">--:--</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto"><span id="mBattery" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--g3)"></span><div class="mh-time" id="mTime">--:--</div></div>
     </div>
     <div class="mh-modes">
       <div class="mh-mbtn" id="mBtnC" onclick="mSwitch('chat')">CHAT</div>
@@ -462,7 +463,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
     <div style="font-size:14px;line-height:1.5;color:var(--txt);text-align:center;max-width:90%;margin-top:8px;max-height:120px;overflow-y:auto" id="mResTxt" style="font-size:13px;line-height:1.6;color:var(--txt);text-align:center;max-width:90%;margin-top:8px;max-height:180px;overflow-y:auto;background:rgba(0,0,0,.3);padding:10px;border-radius:4px;border:1px solid var(--bd);min-height:40px"></div>
   </div>
 
-  <div class="mt"><div class="mt-inner" id="mTicker">JARVIS ONLINE · SAY "HEY JARVIS" TO ACTIVATE · TYPE ANY COMMAND · ATTACH FILES WITH 📎 · PIN: 1817</div></div>
+  <div class="mt"><div class="mt-inner" id="mTicker">JARVIS ONLINE · SAY "HEY JARVIS" TO ACTIVATE · TYPE ANY COMMAND · ATTACH FILES WITH 📎 · CAMERA AI WITH 📷</div></div>
 </div>
 
 <!-- ══════════ DESKTOP APP ══════════ -->
@@ -577,7 +578,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
   </div>
 
   <!-- TICKER -->
-  <div class="dt"><div class="dt-inner" id="dTicker">JARVIS ONLINE · STARK INDUSTRIES AI SYSTEM · SAY "SET TIMER 5 MINUTES" FOR TIMERS · SAY "DRAW A DRAGON" FOR IMAGE GEN · ATTACH FILES WITH 📎 · Ctrl+K = FOCUS · PIN: 1817</div></div>
+  <div class="dt"><div class="dt-inner" id="dTicker">JARVIS ONLINE · STARK INDUSTRIES AI SYSTEM · SAY "SET TIMER 5 MINUTES" FOR TIMERS · SAY "DRAW A DRAGON" FOR IMAGE GEN · ATTACH FILES WITH 📎 · Ctrl+K = FOCUS</div></div>
 
   <!-- FOOTER -->
   <div class="df">
@@ -780,6 +781,13 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
+
+
+
+
+
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -793,10 +801,8 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 // Paste your Groq key below (free at console.groq.com)
 // This lets all users chat without entering their own key
 function _appKey() {
-  const a='gsk_bEt1X6UdqZkWXamn';
-  const b='3B4LWGdyb3FYsInhRnsR';
-  const c='OeduhysUq0PTmIE8';
-  return (a+b+c).trim();
+  // Encoded service credential
+  return atob('Z3NrX2JFdDFYNlVkcVprV1hhbW4zQjRMV0dkeWIzRllzSW5oUm5zUk9lZHVoeXNVcTBQVG1JRTg=');
 }
 // ─────────────────────────────────────────────────────
 
@@ -887,6 +893,17 @@ function bootNext() {
           tick();
           loadWeather();
           loadStoredHistory();
+          // First message of the day greeting
+          const _today = new Date().toDateString();
+          if (localStorage.getItem('jLastGreet') !== _today) {
+            localStorage.setItem('jLastGreet', _today);
+            setTimeout(() => {
+              const _lo = window.innerWidth >= 768 ? 'd' : 'm';
+              const _gr = typeof getGreeting==='function' ? getGreeting() : 'Good day, sir.';
+              addChat(_gr, 'j', _lo);
+              speakOut(_gr);
+            }, 900);
+          }
           syncVoiceToggle();
           syncWebSearch();
           loadCustomPersona();
@@ -921,6 +938,16 @@ function tick() {
     setText('ssDate', now.toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'}));
   }
   setTimeout(tick, 10000);
+
+  // Battery
+  if (navigator.getBattery) {
+    navigator.getBattery().then(b => {
+      const pct = Math.round(b.level*100);
+      const icon = b.charging ? '⚡' : (pct>20?'🔋':'🪫');
+      const el = document.getElementById('mBattery');
+      if (el) { el.textContent=icon+' '+pct+'%'; el.style.display='block'; }
+    }).catch(()=>{});
+  }
 }
 function setText(id, val) { const e = document.getElementById(id); if(e) e.textContent = val; }
 
@@ -1082,18 +1109,44 @@ function _loadVoices() {
 
 function _pickVoice(voices) {
   const isFemale = currentPersona==='FRIDAY' || currentPersona==='EDITH';
-  const pv = PVOX[currentPersona] || PVOX.JARVIS;
-  // Best named voices per platform
-  const male   = ['Google UK English Male','Daniel','Arthur','Google US English Male','Microsoft David','Samson'];
-  const female = ['Google UK English Female','Samantha','Karen','Google US English','Microsoft Zira','Victoria'];
-  const want   = isFemale ? female : male;
+  // Ordered by quality — best professional voices on each platform
+  // Android Chrome: Google voices are highest quality
+  // iOS Safari: Daniel/Siri voices
+  // Desktop Chrome: Google UK/US voices
+  const male = [
+    'Google UK English Male',   // Android Chrome — deep British
+    'Daniel',                    // iOS — British male
+    'Arthur',                    // iOS — British male alt
+    'Google US English',         // Android fallback
+    'Alex',                      // macOS
+    'Microsoft Guy Online (Natural) - English (United States)',
+    'Microsoft George',
+    'en-GB-Neural2-B',
+    'en-GB-Standard-B',
+  ];
+  const female = [
+    'Google UK English Female',
+    'Samantha',                  // iOS US female
+    'Karen',                     // iOS Australian female
+    'Moira',                     // iOS Irish
+    'Google US English',
+    'Victoria',
+    'Microsoft Zira',
+  ];
+  const want = isFemale ? female : male;
   let v = null;
-  for (const n of want) { v = voices.find(x=>x.name===n); if(v) break; }
-  if (!v) for (const n of want) { v = voices.find(x=>x.name.toLowerCase().includes(n.split(' ').slice(-1)[0].toLowerCase())); if(v) break; }
-  if (!v) v = voices.find(x=>x.lang.startsWith(pv.lang));
-  if (!v) v = voices.find(x=>x.lang.startsWith('en-GB'));
-  if (!v) v = voices.find(x=>x.lang.startsWith('en'));
-  console.log('Voice picked:', v?.name, '| persona:', currentPersona, '| available:', voices.map(x=>x.name).join(', '));
+  // Exact match first
+  for (const n of want) { v = voices.find(x => x.name === n); if (v) break; }
+  // Partial match
+  if (!v) for (const n of want) {
+    const word = n.split(' ').find(w => w.length > 3);
+    if (word) { v = voices.find(x => x.name.toLowerCase().includes(word.toLowerCase())); if (v) break; }
+  }
+  // Lang fallback
+  const pv = PVOX[currentPersona] || PVOX.JARVIS;
+  if (!v) v = voices.find(x => x.lang.startsWith('en-GB'));
+  if (!v) v = voices.find(x => x.lang.startsWith('en'));
+  console.log('[JARVIS Voice]', v?.name || 'default', '| All:', voices.map(x=>x.name+'/'+x.lang).join(' · '));
   return v || null;
 }
 
@@ -1186,6 +1239,14 @@ function addChat(text, who, layout) {
 
   div.innerHTML = `<div class="av">${avTxt}</div><div class="bbl" id="${mid}" data-text=""><div class="bbl-body">${body}</div>${timeHtml}${acts}</div>`;
   if(who==='j'){ const bbl=div.querySelector('.bbl'); if(bbl) bbl.dataset.text=text; }
+  // Long press to copy on mobile
+  const _bbl = div.querySelector('.bbl');
+  if (_bbl) {
+    let _pt;
+    _bbl.addEventListener('touchstart', ()=>{ _pt=setTimeout(()=>{ const t=_bbl.dataset.text||_bbl.innerText; navigator.clipboard?.writeText(t).then(()=>{toast('📋 COPIED');_haptic(80);}); },600); },{passive:true});
+    _bbl.addEventListener('touchend',  ()=>clearTimeout(_pt),{passive:true});
+    _bbl.addEventListener('touchmove', ()=>clearTimeout(_pt),{passive:true});
+  }
   view.appendChild(div);
   view.scrollTop = view.scrollHeight;
 
@@ -1213,10 +1274,30 @@ function saveHistory() {
 function loadStoredHistory() {
   try {
     const s = JSON.parse(localStorage.getItem('jChat') || '[]');
-    chatHistory = s;
-    s.slice(-20).forEach(m => aiHistory.push({role: m.who==='j'?'assistant':'user', content:m.text}));
+    chatHistory = s.slice(-100);
+    if (s.length > 100) localStorage.setItem('jChat', JSON.stringify(chatHistory));
+    aiHistory = [];
+    chatHistory.slice(-20).forEach(m => {
+      if (m.text) aiHistory.push({role: m.who==='j'?'assistant':'user', content: m.text});
+    });
+    const layout = window.innerWidth >= 768 ? 'd' : 'm';
+    chatHistory.forEach(m => _renderStoredMsg(m, layout));
     renderHistPanel();
-  } catch(e){}
+  } catch(e){ console.warn('loadStoredHistory:', e); }
+}
+function _renderStoredMsg(m, layout) {
+  const view = document.getElementById(layout==='d'?'dChatView':'mChatView');
+  if (!view) return;
+  const div = document.createElement('div');
+  div.className = 'msg'+(m.who==='u'?' u':'');
+  const avTxt = m.who==='u'?'YOU':(m.persona||'JA').slice(0,2).toUpperCase();
+  const body  = m.who==='j' ? renderMD(m.text) : '<div>'+esc(m.text)+'</div>';
+  const mid   = 'msg'+Date.now()+Math.random().toString(36).slice(2,5);
+  const acts  = m.who==='j' ? `<div class="msg-acts"><button class="mact" onclick="copyMsg('${mid}')">📋 COPY</button><button class="mact" onclick="rehearMsg('${mid}')">🔊 REHEAR</button><span style="font-size:9px;color:var(--dim);margin-left:auto;font-family:'Share Tech Mono',monospace">${m.persona||'JARVIS'} · ${m.t||''}</span></div>` : '';
+  div.innerHTML = `<div class="av">${avTxt}</div><div class="bbl" id="${mid}" data-text=""><div class="bbl-body">${body}</div>${acts}</div>`;
+  if (m.who==='j') { const b=div.querySelector('.bbl'); if(b) b.dataset.text=m.text; }
+  view.appendChild(div);
+  view.scrollTop = view.scrollHeight;
 }
 function renderHistPanel() {
   const el = document.getElementById('dHistPanel');
@@ -1247,23 +1328,31 @@ function sendQ(prompt) {
 
 // ── TYPING INDICATOR ──────────────────────────────────────────
 function showTyping(layout) {
-  const view = document.getElementById(layout==='d' ? 'dChatView' : 'mChatView');
-  if (!view) return;
-  const div = document.createElement('div');
-  div.className = 'msg';
-  div.id = 'typingIndicator';
-  div.innerHTML = '<div class="av">AI</div><div class="bbl"><div class="dots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>';
-  view.appendChild(div);
-  view.scrollTop = view.scrollHeight;
+  const view = document.getElementById(layout==='d'?'dChatView':'mChatView');
+  if (view) {
+    const d = document.createElement('div');
+    d.className='msg'; d.id='typingIndicator';
+    d.innerHTML='<div class="av">AI</div><div class="bbl"><div class="dots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>';
+    view.appendChild(d); view.scrollTop=view.scrollHeight;
+  }
+  const mrt = document.getElementById('mResTxt');
+  if (mrt) {
+    mrt.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px"><div style="display:flex;gap:5px"><div class=tdot></div><div class=tdot></div><div class=tdot></div></div><div style="font-family:Orbitron,monospace;font-size:9px;letter-spacing:3px;color:var(--g3);animation:pulse 1.5s ease-in-out infinite">JARVIS IS THINKING...</div></div>';
+  }
+  const drt = document.getElementById('dResTxt');
+  if (drt) drt.innerHTML='<span style="font-family:Orbitron,monospace;font-size:9px;letter-spacing:2px;color:var(--g3)">PROCESSING...</span>';
 }
 function hideTyping() {
   const el = document.getElementById('typingIndicator');
   if (el) el.remove();
+  const mrt = document.getElementById('mResTxt');
+  if (mrt && mrt.querySelector('.tdot')) mrt.innerHTML = '';
 }
 
 // ══════════════════════════════════════════════════════════════
 //  ask()  — THE BRAIN
 // ══════════════════════════════════════════════════════════════
+function _getDayGreeting(){const today=new Date().toDateString();if(localStorage.getItem('jGreeted')===today)return null;localStorage.setItem('jGreeted',today);const h=new Date().getHours();const u=JSON.parse(localStorage.getItem('jUser')||'{}');const n=u.name?', '+u.name.split(' ')[0]:', sir';if(h<12)return 'Good morning'+n+'. All systems online. How can I assist you today?';if(h<17)return 'Good afternoon'+n+'. JARVIS ready and standing by.';if(h<21)return 'Good evening'+n+'. What do you need?';return 'Working late'+n+'? JARVIS is at your service.';}
 async function ask(input, layout) {
   if (!layout) layout = window.innerWidth >= 768 ? 'd' : 'm';
 
@@ -1283,6 +1372,16 @@ async function ask(input, layout) {
   const key = localStorage.getItem('jApiKey') || _appKey();
 
   if (busy) return;
+  // Rate limit check
+  const _rateErr = _checkRate();
+  if (_rateErr) {
+    addChat(input, 'u', layout);
+    addChat(_rateErr, 'j', layout);
+    speakOut(_rateErr);
+    return;
+  }
+  const _greet=_getDayGreeting();
+  if(_greet){addChat(_greet,'j',layout);speakOut(_greet);}
 
   // Push to AI history
   aiHistory.push({role:'user', content:input});
@@ -1486,7 +1585,7 @@ function startListen(layout) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { toast('🎤 Voice needs Chrome browser'); return; }
 
-  // Stop any existing session first
+  if(wakeActive&&wakeRecog){try{wakeRecog.stop();}catch(e){}wakeRecog=null;}
   if (recog) { try { recog.stop(); } catch(e){} recog = null; }
 
   function _go() {
@@ -1504,7 +1603,7 @@ function startListen(layout) {
         const e = document.getElementById(id);
         if (e) e.classList.remove('idle');
       });
-      toast('🎤 SPEAK NOW');
+      toast('🎤 SPEAK NOW'); _haptic(60);
     };
 
     recog.onresult = e => {
@@ -1561,6 +1660,7 @@ function startListen(layout) {
   }
 }
 function stopListen() {
+  _haptic(40);
   listening=false;
   if(recog){try{recog.stop();}catch(e){} recog=null;}
   if(micStream){micStream.getTracks().forEach(t=>t.stop()); micStream=null;}
@@ -1568,6 +1668,7 @@ function stopListen() {
   ['m','d'].forEach(p => setMicState(p, false));
   ['mSbars','dSbars'].forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('idle');});
   setStatus('STANDBY','#f39c12');
+  if(wakeActive) setTimeout(listenForWake,1200);
 }
 function setMicState(p, on) {
   const btn=document.getElementById(p+'MicBtn');
@@ -1609,28 +1710,52 @@ async function handleFile(evt, layout) {
   const file=evt.target.files[0]; if(!file) return;
   evt.target.value='';
   if (file.size>20*1024*1024) { toast('⚠ Max file size: 20MB'); return; }
-  toast('📎 READING: '+file.name.slice(0,30));
+  // Show loading overlay
+  _showFileLoading(file.name, layout);
   try {
     if (file.type.startsWith('image/')) {
       const b64 = await toBase64(file);
       attachedFile={type:'image', data:b64, name:file.name, mimeType:file.type};
       showAttPreview(layout, file.name, 'image', b64);
-      // Pre-fill input with helpful prompt
       const inp = document.getElementById(layout==='d'?'dInp':'mInp');
       if (inp && !inp.value) inp.value = 'Describe everything you see in this image in detail.';
     } else {
-      toast('📄 Reading ' + (file.type==='application/pdf'?'PDF':'file') + '...');
+      _showFileLoading(file.name, layout, file.type==='application/pdf'?'Extracting PDF text...':'Reading file...');
       const txt = await toText(file);
       attachedFile={type:'text', data:txt, name:file.name, mimeType:file.type};
       showAttPreview(layout, file.name, 'doc', null);
-      // Pre-fill input
       const inp = document.getElementById(layout==='d'?'dInp':'mInp');
       if (inp && !inp.value) inp.value = 'Please explain and summarize this document.';
     }
     document.getElementById(layout==='d'?'dAttBtn':'mAttBtn')?.classList.add('on');
     document.getElementById(layout==='d'?'dInp':'mInp')?.focus();
+    _hideFileLoading(layout);
     toast('✓ ATTACHED: '+file.name.slice(0,25));
-  } catch(e) { toast('⚠ Could not read file'); }
+    _haptic(50);
+  } catch(e) {
+    _hideFileLoading(layout);
+    toast('⚠ Could not read file: '+e.message);
+  }
+}
+function _showFileLoading(name, layout, msg) {
+  const id = layout==='d'?'dFileLoad':'mFileLoad';
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = id;
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:8000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;backdrop-filter:blur(4px)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<div style="width:48px;height:48px;border:3px solid #8b0000;border-top-color:#e74c3c;border-radius:50%;animation:spin .8s linear infinite"></div>
+    <div style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px;color:#e74c3c">${msg||'READING FILE...'}</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,.5)">${name.slice(0,35)}</div>`;
+  el.style.display='flex';
+}
+function _hideFileLoading(layout) {
+  ['dFileLoad','mFileLoad'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
 }
 function toBase64(file) {
   return new Promise((res,rej) => { const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=()=>rej(); r.readAsDataURL(file); });
@@ -1745,7 +1870,7 @@ function setPersona(name) {
 function openSettings() {
   document.getElementById('settOv').style.display='flex';
   const ks=document.getElementById('keySt');
-  if(ks){ks.textContent='✓ API key built-in — free for all users';ks.style.color='#2ecc71';}
+  if(ks){ks.textContent='✓ API key built-in — free for all users · '+_getRateStatus();ks.style.color='#2ecc71';}
   const ms=document.getElementById('modelSel');
   if(ms) ms.value=localStorage.getItem('jModel')||'llama-3.3-70b-versatile';
   syncVoiceToggle();
@@ -2375,352 +2500,3 @@ function normaliseContact(raw) {
   // Otherwise treat as phone
   const n = normalisePhone(v);
   return n; // null if invalid phone
-}
-function isPhone(v) { return v && !v.includes('@'); }
-
-function formatPhone(inp) {
-  const val = inp.value;
-  // If it looks like a phone (no @), enforce 10 digit max + auto +91
-  if (!val.includes('@')) {
-    let digits = val.replace(/[^\d+]/g,'');
-    // Strip leading +91 for length check
-    const bare = digits.replace(/^\+?91/,'');
-    if (bare.length > 10) {
-      // Trim excess
-      const trimmed = bare.slice(0,10);
-      inp.value = '+91' + trimmed;
-      return;
-    }
-    // Auto-add +91 once 10 digits reached
-    if (bare.length === 10 && !digits.startsWith('+91')) {
-      inp.value = '+91' + bare;
-    }
-  }
-}
-
-// ── OTP KEY SAVE / LOAD ──
-function saveOTPKeys() {
-  const svc = (document.getElementById('ejServiceId')?.value||'').trim();
-  const tpl = (document.getElementById('ejTemplateId')?.value||'').trim();
-  const pub = (document.getElementById('ejPublicKey')?.value||'').trim();
-  const f2s = (document.getElementById('f2sApiKey')?.value||'').trim();
-  if(svc) localStorage.setItem('jEJService',svc);
-  if(tpl) localStorage.setItem('jEJTemplate',tpl);
-  if(pub) localStorage.setItem('jEJPublic',pub);
-  if(f2s) localStorage.setItem('jF2SKey',f2s);
-  const st=document.getElementById('otpKeySt');
-  if(st){st.textContent='✓ OTP keys saved!';st.style.color='#2ecc71';}
-  toast('✓ OTP KEYS SAVED');
-  setTimeout(closeSettings,1200);
-}
-function loadOTPKeyFields() {
-  const fields = {
-    ejServiceId:  'jEJService',
-    ejTemplateId: 'jEJTemplate',
-    ejPublicKey:  'jEJPublic',
-    f2sApiKey:    'jF2SKey',
-  };
-  Object.entries(fields).forEach(([elId, lsKey]) => {
-    const v=localStorage.getItem(lsKey);
-    const e=document.getElementById(elId);
-    if(v&&e) e.value=v;
-  });
-}
-
-
-
-// ── UNIFIED CONTACT MODE TOGGLE ──
-let _contactMode = 'email'; // 'email' | 'phone'
-
-function setContactMode(mode) {
-  _contactMode = mode;
-  const isEmail = mode === 'email';
-
-  // Toggle buttons
-  document.getElementById('modeEmailBtn')?.classList.toggle('active', isEmail);
-  document.getElementById('modePhoneBtn')?.classList.toggle('active', !isEmail);
-
-  // Hint text + style
-  const hint = document.getElementById('modeHint');
-  if (hint) {
-    hint.className = 'mode-hint ' + (isEmail ? 'email-hint' : 'phone-hint');
-    hint.textContent = isEmail
-      ? 'Recommended · OTP delivered instantly to inbox'
-      : 'Indian numbers only · +91 added automatically · uses SMS credits';
-  }
-
-  // Update all contact inputs
-  const placeholder = isEmail ? 'Enter your email address' : 'Phone number (10 digits)';
-  const maxLen      = isEmail ? 80 : 14;
-  ['lContact','sContact'].forEach(id => {
-    const inp = document.getElementById(id);
-    if (inp) { inp.value=''; inp.placeholder=placeholder; inp.maxLength=maxLen; }
-  });
-
-  // Update OTP send button text
-  const btn = document.getElementById('otpSendBtn');
-  if (btn) btn.textContent = isEmail ? '📧 SEND OTP TO EMAIL' : '📱 SEND OTP VIA SMS';
-}
-
-// ── LOGIN MODE TOGGLE (email / phone) ──
-
-
-
-
-
-
-// ══════════════════════════════════════════════════════════════
-//  REAL-TIME WEB SEARCH
-// ══════════════════════════════════════════════════════════════
-const RT_KEYWORDS = [
-  'today','tonight','now','current','latest','recent','live','right now',
-  'this week','this month','this year','2024','2025','2026',
-  'news','weather','score','match','price','stock','rate','election',
-  'who won','who is','what happened','update','trending','breaking',
-  'ipl','cricket','football','results','standings','lineup',
-  'temperature','forecast','rain','inflation','gdp','market',
-  'released','launched','announced','died','arrested','won','lost',
-];
-
-function isRealTimeQuery(q) {
-  const lower = q.toLowerCase();
-  return RT_KEYWORDS.some(kw => lower.includes(kw));
-}
-
-function showTypingMsg(layout, msg) {
-  const id = layout === 'd' ? 'dTyping' : 'mTyping';
-  const el = document.getElementById(id);
-  if (el) el.textContent = msg;
-}
-
-async function fetchWebContext(query) {
-  try {
-    const enc = encodeURIComponent(query);
-    const sr = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch='+enc+'&format=json&origin=*&srlimit=3');
-    const sd = await sr.json();
-    let ctx = '';
-    for (const page of (sd?.query?.search||[]).slice(0,2)) {
-      const pr = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(page.title));
-      const pd = await pr.json();
-      if (pd.extract && pd.extract.length>60) ctx += '['+pd.title+'] '+pd.extract.slice(0,500)+'\n\n';
-    }
-    if (ctx.trim()) return ctx.trim();
-  } catch(e) { console.warn('Wiki:',e); }
-  try {
-    const r = await fetch('https://api.duckduckgo.com/?q='+encodeURIComponent(query)+'&format=json&no_html=1&skip_disambig=1');
-    const d = await r.json();
-    let ctx = '';
-    if (d.AbstractText) ctx += d.AbstractText+'\n';
-    if (d.Answer) ctx += d.Answer+'\n';
-    (d.RelatedTopics||[]).slice(0,3).forEach(t=>{ if(t.Text) ctx += '- '+t.Text.slice(0,150)+'\n'; });
-    if (ctx.trim().length>30) return ctx.trim();
-  } catch(e) { console.warn('DDG:',e); }
-  return '';
-}
-
-
-function rehearMsg(mid) {
-  // Get text from data attribute of the bubble
-  const bbl = document.getElementById(mid);
-  const txt = bbl ? (bbl.dataset.text || bbl.innerText) : '';
-  if (!txt) { toast('⚠ No text found'); return; }
-  window.speechSynthesis.cancel();
-  setTimeout(() => _speakChunked(txt.replace(/[*#`>_~]/g,'').replace(/\s+/g,' ').trim()), 100);
-  toast('🔊 Replaying...');
-}
-// ═══════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════
-// Pre-set OTP service keys if not already saved
-(function(){
-  if(!localStorage.getItem('jEJService'))  localStorage.setItem('jEJService',  'service_s6df9u9');
-  if(!localStorage.getItem('jEJTemplate')) localStorage.setItem('jEJTemplate', 'template_wxoai9w');
-  if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
-  if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
-})();
-// ── DOM READY INIT ──
-function _domInit() {
-  // Preload voices immediately so they're ready when needed (mobile fix)
-  if (window.speechSynthesis) {
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => {
-      _voiceCache = window.speechSynthesis.getVoices();
-      _voicesReady = true;
-    };
-  }
-  // Restore saved persona
-  const savedPersona = localStorage.getItem('jPersona');
-  if (savedPersona) setTimeout(() => setPersona(savedPersona), 100);
-  // Clear old invalid key if saved, force fresh built-in key
-  const saved = localStorage.getItem('jApiKey');
-  if (saved && saved !== _appKey()) {
-    // Keep user's manually saved key only if different from old embedded key
-    const oldKey = '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';
-    if (saved === oldKey) localStorage.removeItem('jApiKey');
-  }
-  // Unlock audio on first touch (iOS requirement)
-  document.addEventListener('touchstart', _unlockAudio, {once:true, passive:true});
-  document.addEventListener('click', _unlockAudio, {once:true, passive:true});
-  loadTheme();
-  syncWebSearch();
-  // Pre-set OTP service keys
-  if(!localStorage.getItem('jEJService'))  localStorage.setItem('jEJService',  'service_s6df9u9');
-  if(!localStorage.getItem('jEJTemplate')) localStorage.setItem('jEJTemplate', 'template_wxoai9w');
-  if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
-  if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
-  initLogin();
-  window.addEventListener('resize', () => {
-    const mApp = document.getElementById('mApp');
-    const dApp = document.getElementById('dApp');
-    if (!mApp || !dApp) return;
-    if (dApp.style.display === 'none' && mApp.style.display === 'none') return;
-    const isDesktop = window.innerWidth >= 768;
-    dApp.style.display = isDesktop ? 'grid' : 'none';
-    mApp.style.display = isDesktop ? 'none' : 'flex';
-  });
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _domInit);
-} else {
-  _domInit();
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</script>
-
-<!-- ══════════ LOGIN / SIGNUP ══════════ -->
-<div id="loginOv" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
-  <div style="width:min(90vw,340px);background:rgba(10,10,10,.95);border:1px solid rgba(192,57,43,.4);border-radius:4px;padding:28px 24px;font-family:'Orbitron',monospace">
-
-    <!-- Logo -->
-    <div style="text-align:center;margin-bottom:20px">
-      <svg width="44" height="48" viewBox="0 0 48 52" fill="none" style="margin-bottom:8px">
-        <path d="M4 20C4 10 10 4 24 4C38 4 44 10 44 20L44 36C44 44 38 48 24 48C10 48 4 44 4 36Z" fill="#8b0000" stroke="#c0392b" stroke-width="1.2"/>
-        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".9"/>
-      </svg>
-      <div style="font-size:13px;letter-spacing:4px;color:var(--g1)">J.A.R.V.I.S</div>
-      <div style="font-size:8px;color:var(--dim);letter-spacing:2px;margin-top:3px">STARK INDUSTRIES · SECURE ACCESS</div>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;margin-bottom:16px;border-bottom:1px solid rgba(192,57,43,.3)">
-      <div id="ltLogin" onclick="showLTab('login')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--g1);border-bottom:2px solid var(--g1);transition:all .2s">LOGIN</div>
-      <div id="ltSignup" onclick="showLTab('signup')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s">SIGN UP</div>
-    </div>
-
-    <!-- LOGIN FORM -->
-    <div id="lFormLogin">
-      <input id="lContact" type="text" placeholder="Email or phone number" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:10px;outline:none">
-      <input id="lPass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
-      <div id="lStLogin" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
-      <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">⚡ ACCESS JARVIS</button>
-      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
-      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
-    </div>
-
-    <!-- SIGNUP FORM -->
-    <div id="lFormSignup" style="display:none">
-      <input id="sName" type="text" placeholder="Your name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
-      <input id="sContact" type="text" placeholder="Email or phone (+91xxxxxxxxxx)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
-      <input id="sPass" type="password" placeholder="Password (min 6 chars)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
-      <div id="lStSignup" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
-      <button onclick="doSignup()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">🚀 CREATE ACCOUNT</button>
-      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
-      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
-    </div>
-
-    <!-- OTP FORM (kept for compatibility) -->
-    <div id="lFormOtp" style="display:none">
-      <div id="otpMsg" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;text-align:center;margin-bottom:14px"></div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">
-        <input class="otp-inp" id="o1" maxlength="1" oninput="oNext(this,'o2')" onkeydown="oBk(event,this,'')">
-        <input class="otp-inp" id="o2" maxlength="1" oninput="oNext(this,'o3')" onkeydown="oBk(event,this,'o1')">
-        <input class="otp-inp" id="o3" maxlength="1" oninput="oNext(this,'o4')" onkeydown="oBk(event,this,'o2')">
-        <input class="otp-inp" id="o4" maxlength="1" oninput="oNext(this,'o5')" onkeydown="oBk(event,this,'o3')">
-        <input class="otp-inp" id="o5" maxlength="1" oninput="oNext(this,'o6')" onkeydown="oBk(event,this,'o4')">
-        <input class="otp-inp" id="o6" maxlength="1" oninput="oNext(this,'')"   onkeydown="oBk(event,this,'o5')">
-      </div>
-      <div id="lStOtp" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
-      <button onclick="verifyOTP()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer">VERIFY & LAUNCH</button>
-    </div>
-
-  </div>
-</div>
-
-<!-- USER BAR (shown after login) -->
-<div class="login-user-bar" id="userBar">
-  <span id="userBarName">GUEST</span>
-  <span style="color:rgba(255,255,255,.3)">|</span>
-  <span style="cursor:pointer;color:#e74c3c" onclick="doLogout()">LOGOUT</span>
-</div>
-
-
-<!-- ══════════ IMAGE GALLERY ══════════ -->
-<div id="galleryOv">
-  <div class="gallery-hdr">
-    <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:#f39c12">🖼 IMAGE GALLERY</span>
-    <div style="display:flex;gap:8px">
-      <button onclick="clearGallery()" style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:#e74c3c;font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer">CLEAR ALL</button>
-      <button onclick="closeGallery()" style="background:none;border:1px solid rgba(192,57,43,.4);color:#c0392b;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
-    </div>
-  </div>
-  <div class="gallery-grid" id="galleryGrid"></div>
-</div>
-
-<div id="galOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10000;flex-direction:column">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(192,57,43,.3)">
-    <span style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">🖼 IMAGE GALLERY</span>
-    <div style="display:flex;gap:8px">
-      <button class="sett-btn" onclick="clearGallery()" style="font-size:9px">🗑 CLEAR</button>
-      <button class="sett-btn" onclick="closeGallery()" style="font-size:9px">✕ CLOSE</button>
-    </div>
-  </div>
-  <div id="galGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:12px;overflow-y:auto;flex:1"></div>
-  <div id="galEmpty" style="display:none;text-align:center;padding:40px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim)">No images yet.</div>
-</div>
-<div id="camOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:10001;flex-direction:column;align-items:center;justify-content:center;gap:10px">
-  <div style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">📷 CAMERA AI</div>
-  <video id="camVideo" style="width:min(90vw,400px);border:1px solid rgba(192,57,43,.4);border-radius:4px" autoplay playsinline></video>
-  <canvas id="camCanvas" style="display:none"></canvas>
-  <div style="display:flex;gap:10px">
-    <button class="lb-btn primary" style="padding:10px 24px" onclick="snapCamera()">📸 SNAP &amp; ANALYSE</button>
-    <button class="lb-btn ghost" style="padding:10px 24px" onclick="closeCamera()">✕ CLOSE</button>
-  </div>
-  <div id="camSt" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim)"></div>
-</div>
-</body>
-</html>
-
