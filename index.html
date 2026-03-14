@@ -788,6 +788,7 @@ canvas#dWave{position:absolute;bottom:80px;left:0;width:100%;height:60px;opacity
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  J.A.R.V.I.S  —  Complete clean implementation
 //  All features. All variables declared before use.
@@ -2500,3 +2501,392 @@ function normaliseContact(raw) {
   // Otherwise treat as phone
   const n = normalisePhone(v);
   return n; // null if invalid phone
+}
+function isPhone(v) { return v && !v.includes('@'); }
+
+function formatPhone(inp) {
+  const val = inp.value;
+  // If it looks like a phone (no @), enforce 10 digit max + auto +91
+  if (!val.includes('@')) {
+    let digits = val.replace(/[^\d+]/g,'');
+    // Strip leading +91 for length check
+    const bare = digits.replace(/^\+?91/,'');
+    if (bare.length > 10) {
+      // Trim excess
+      const trimmed = bare.slice(0,10);
+      inp.value = '+91' + trimmed;
+      return;
+    }
+    // Auto-add +91 once 10 digits reached
+    if (bare.length === 10 && !digits.startsWith('+91')) {
+      inp.value = '+91' + bare;
+    }
+  }
+}
+
+// ── OTP KEY SAVE / LOAD ──
+function saveOTPKeys() {
+  const svc = (document.getElementById('ejServiceId')?.value||'').trim();
+  const tpl = (document.getElementById('ejTemplateId')?.value||'').trim();
+  const pub = (document.getElementById('ejPublicKey')?.value||'').trim();
+  const f2s = (document.getElementById('f2sApiKey')?.value||'').trim();
+  if(svc) localStorage.setItem('jEJService',svc);
+  if(tpl) localStorage.setItem('jEJTemplate',tpl);
+  if(pub) localStorage.setItem('jEJPublic',pub);
+  if(f2s) localStorage.setItem('jF2SKey',f2s);
+  const st=document.getElementById('otpKeySt');
+  if(st){st.textContent='✓ OTP keys saved!';st.style.color='#2ecc71';}
+  toast('✓ OTP KEYS SAVED');
+  setTimeout(closeSettings,1200);
+}
+function loadOTPKeyFields() {
+  const fields = {
+    ejServiceId:  'jEJService',
+    ejTemplateId: 'jEJTemplate',
+    ejPublicKey:  'jEJPublic',
+    f2sApiKey:    'jF2SKey',
+  };
+  Object.entries(fields).forEach(([elId, lsKey]) => {
+    const v=localStorage.getItem(lsKey);
+    const e=document.getElementById(elId);
+    if(v&&e) e.value=v;
+  });
+}
+
+
+
+// ── UNIFIED CONTACT MODE TOGGLE ──
+let _contactMode = 'email'; // 'email' | 'phone'
+
+function setContactMode(mode) {
+  _contactMode = mode;
+  const isEmail = mode === 'email';
+
+  // Toggle buttons
+  document.getElementById('modeEmailBtn')?.classList.toggle('active', isEmail);
+  document.getElementById('modePhoneBtn')?.classList.toggle('active', !isEmail);
+
+  // Hint text + style
+  const hint = document.getElementById('modeHint');
+  if (hint) {
+    hint.className = 'mode-hint ' + (isEmail ? 'email-hint' : 'phone-hint');
+    hint.textContent = isEmail
+      ? 'Recommended · OTP delivered instantly to inbox'
+      : 'Indian numbers only · +91 added automatically · uses SMS credits';
+  }
+
+  // Update all contact inputs
+  const placeholder = isEmail ? 'Enter your email address' : 'Phone number (10 digits)';
+  const maxLen      = isEmail ? 80 : 14;
+  ['lContact','sContact'].forEach(id => {
+    const inp = document.getElementById(id);
+    if (inp) { inp.value=''; inp.placeholder=placeholder; inp.maxLength=maxLen; }
+  });
+
+  // Update OTP send button text
+  const btn = document.getElementById('otpSendBtn');
+  if (btn) btn.textContent = isEmail ? '📧 SEND OTP TO EMAIL' : '📱 SEND OTP VIA SMS';
+}
+
+// ── LOGIN MODE TOGGLE (email / phone) ──
+
+
+
+
+
+
+// ══════════════════════════════════════════════════════════════
+//  REAL-TIME WEB SEARCH
+// ══════════════════════════════════════════════════════════════
+const RT_KEYWORDS = [
+  'today','tonight','now','current','latest','recent','live','right now',
+  'this week','this month','this year','2024','2025','2026',
+  'news','weather','score','match','price','stock','rate','election',
+  'who won','who is','what happened','update','trending','breaking',
+  'ipl','cricket','football','results','standings','lineup',
+  'temperature','forecast','rain','inflation','gdp','market',
+  'released','launched','announced','died','arrested','won','lost',
+];
+
+function isRealTimeQuery(q) {
+  const lower = q.toLowerCase();
+  return RT_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function showTypingMsg(layout, msg) {
+  const id = layout === 'd' ? 'dTyping' : 'mTyping';
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+}
+
+async function fetchWebContext(query) {
+  try {
+    const enc = encodeURIComponent(query);
+    const sr = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch='+enc+'&format=json&origin=*&srlimit=3');
+    const sd = await sr.json();
+    let ctx = '';
+    for (const page of (sd?.query?.search||[]).slice(0,2)) {
+      const pr = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(page.title));
+      const pd = await pr.json();
+      if (pd.extract && pd.extract.length>60) ctx += '['+pd.title+'] '+pd.extract.slice(0,500)+'\n\n';
+    }
+    if (ctx.trim()) return ctx.trim();
+  } catch(e) { console.warn('Wiki:',e); }
+  try {
+    const r = await fetch('https://api.duckduckgo.com/?q='+encodeURIComponent(query)+'&format=json&no_html=1&skip_disambig=1');
+    const d = await r.json();
+    let ctx = '';
+    if (d.AbstractText) ctx += d.AbstractText+'\n';
+    if (d.Answer) ctx += d.Answer+'\n';
+    (d.RelatedTopics||[]).slice(0,3).forEach(t=>{ if(t.Text) ctx += '- '+t.Text.slice(0,150)+'\n'; });
+    if (ctx.trim().length>30) return ctx.trim();
+  } catch(e) { console.warn('DDG:',e); }
+  return '';
+}
+
+
+function rehearMsg(mid) {
+  // Get text from data attribute of the bubble
+  const bbl = document.getElementById(mid);
+  const txt = bbl ? (bbl.dataset.text || bbl.innerText) : '';
+  if (!txt) { toast('⚠ No text found'); return; }
+  window.speechSynthesis.cancel();
+  setTimeout(() => _speakChunked(txt.replace(/[*#`>_~]/g,'').replace(/\s+/g,' ').trim()), 100);
+  toast('🔊 Replaying...');
+}
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+// Pre-set OTP service keys if not already saved
+(function(){
+  if(!localStorage.getItem('jEJService'))  localStorage.setItem('jEJService',  'service_s6df9u9');
+  if(!localStorage.getItem('jEJTemplate')) localStorage.setItem('jEJTemplate', 'template_wxoai9w');
+  if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
+  if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
+})();
+// ── DOM READY INIT ──
+
+// ── Rate limiting ─────────────────────────────────────────────
+const DAILY_LIMIT = 100;
+function _getRateData() {
+  try {
+    const d = JSON.parse(localStorage.getItem('jRate')||'{}');
+    const today = new Date().toDateString();
+    if (d.date !== today) return {date:today, count:0};
+    return d;
+  } catch(e) { return {date:new Date().toDateString(), count:0}; }
+}
+function _checkRate() {
+  const d = _getRateData();
+  if (d.count >= DAILY_LIMIT) {
+    const remaining = new Date(); remaining.setHours(24,0,0,0);
+    const hrs = Math.ceil((remaining - Date.now()) / 3600000);
+    return `Daily limit reached, sir. ${DAILY_LIMIT} requests used. Resets in ${hrs} hour${hrs!==1?'s':''}.`;
+  }
+  d.count++;
+  localStorage.setItem('jRate', JSON.stringify(d));
+  return null;
+}
+function _getRateStatus() {
+  const d = _getRateData();
+  return `${d.count}/${DAILY_LIMIT} requests today`;
+}
+
+
+// ── Haptic feedback (mobile only) ─────────────────────────────
+function _haptic(ms) {
+  try { if (navigator.vibrate) navigator.vibrate(ms||40); } catch(e){}
+}
+
+function _domInit() {
+  // Preload voices immediately so they're ready when needed (mobile fix)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      _voiceCache = window.speechSynthesis.getVoices();
+      _voicesReady = true;
+    };
+  }
+  // Restore saved persona
+  const savedPersona = localStorage.getItem('jPersona');
+  if (savedPersona) setTimeout(() => setPersona(savedPersona), 100);
+  // Clear old invalid key if saved, force fresh built-in key
+  const saved = localStorage.getItem('jApiKey');
+  if (saved && saved !== _appKey()) {
+    // Keep user's manually saved key only if different from old embedded key
+    const oldKey = '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';
+    if (saved === oldKey) localStorage.removeItem('jApiKey');
+  }
+  // Unlock audio on first touch (iOS requirement)
+  document.addEventListener('touchstart', _unlockAudio, {once:true, passive:true});
+  document.addEventListener('click', _unlockAudio, {once:true, passive:true});
+  loadTheme();
+  syncWebSearch();
+  // Pre-set OTP service keys
+  if(!localStorage.getItem('jEJService'))  localStorage.setItem('jEJService',  'service_s6df9u9');
+  if(!localStorage.getItem('jEJTemplate')) localStorage.setItem('jEJTemplate', 'template_wxoai9w');
+  if(!localStorage.getItem('jEJPublic'))   localStorage.setItem('jEJPublic',   'sRmWi2SLHcSu3ivgk');
+  if(!localStorage.getItem('jF2SKey'))     localStorage.setItem('jF2SKey',     'tFnihqwmp3WoEK0afb1QCJOkje7LVAY58yZds6HcrPuBS2TNXIVAOwGTQzhWsbxtpqjB4c5N3dRLmSFg');
+  initLogin();
+  window.addEventListener('resize', () => {
+    const mApp = document.getElementById('mApp');
+    const dApp = document.getElementById('dApp');
+    if (!mApp || !dApp) return;
+    if (dApp.style.display === 'none' && mApp.style.display === 'none') return;
+    const isDesktop = window.innerWidth >= 768;
+    dApp.style.display = isDesktop ? 'grid' : 'none';
+    mApp.style.display = isDesktop ? 'none' : 'flex';
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _domInit);
+} else {
+  _domInit();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+<!-- ══════════ LOGIN / SIGNUP ══════════ -->
+<div id="loginOv" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(10px)">
+  <div style="width:min(90vw,340px);background:rgba(10,10,10,.95);border:1px solid rgba(192,57,43,.4);border-radius:4px;padding:28px 24px;font-family:'Orbitron',monospace">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:20px">
+      <svg width="44" height="48" viewBox="0 0 48 52" fill="none" style="margin-bottom:8px">
+        <path d="M4 20C4 10 10 4 24 4C38 4 44 10 44 20L44 36C44 44 38 48 24 48C10 48 4 44 4 36Z" fill="#8b0000" stroke="#c0392b" stroke-width="1.2"/>
+        <circle cx="24" cy="26" r="5" fill="#ffd700" opacity=".9"/>
+      </svg>
+      <div style="font-size:13px;letter-spacing:4px;color:var(--g1)">J.A.R.V.I.S</div>
+      <div style="font-size:8px;color:var(--dim);letter-spacing:2px;margin-top:3px">STARK INDUSTRIES · SECURE ACCESS</div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;margin-bottom:16px;border-bottom:1px solid rgba(192,57,43,.3)">
+      <div id="ltLogin" onclick="showLTab('login')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--g1);border-bottom:2px solid var(--g1);transition:all .2s">LOGIN</div>
+      <div id="ltSignup" onclick="showLTab('signup')" style="flex:1;text-align:center;padding:8px;font-size:9px;letter-spacing:2px;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s">SIGN UP</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="lFormLogin">
+      <input id="lContact" type="text" placeholder="Email or phone number" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:10px;outline:none">
+      <input id="lPass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <div id="lStLogin" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="doLogin()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">⚡ ACCESS JARVIS</button>
+      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
+      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="lFormSignup" style="display:none">
+      <input id="sName" type="text" placeholder="Your name" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <input id="sContact" type="text" placeholder="Email or phone (+91xxxxxxxxxx)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <input id="sPass" type="password" placeholder="Password (min 6 chars)" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(192,57,43,.3);border-radius:2px;padding:10px 12px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:11px;box-sizing:border-box;margin-bottom:8px;outline:none">
+      <div id="lStSignup" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="doSignup()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:8px">🚀 CREATE ACCOUNT</button>
+      <div style="text-align:center;font-size:9px;color:var(--dim);margin-bottom:8px;font-family:'Share Tech Mono',monospace">── OR ──</div>
+      <button onclick="doGuest()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(255,255,255,.5);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;cursor:pointer">CONTINUE AS GUEST</button>
+    </div>
+
+    <!-- OTP FORM (kept for compatibility) -->
+    <div id="lFormOtp" style="display:none">
+      <div id="otpMsg" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#f39c12;text-align:center;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">
+        <input class="otp-inp" id="o1" maxlength="1" oninput="oNext(this,'o2')" onkeydown="oBk(event,this,'')">
+        <input class="otp-inp" id="o2" maxlength="1" oninput="oNext(this,'o3')" onkeydown="oBk(event,this,'o1')">
+        <input class="otp-inp" id="o3" maxlength="1" oninput="oNext(this,'o4')" onkeydown="oBk(event,this,'o2')">
+        <input class="otp-inp" id="o4" maxlength="1" oninput="oNext(this,'o5')" onkeydown="oBk(event,this,'o3')">
+        <input class="otp-inp" id="o5" maxlength="1" oninput="oNext(this,'o6')" onkeydown="oBk(event,this,'o4')">
+        <input class="otp-inp" id="o6" maxlength="1" oninput="oNext(this,'')"   onkeydown="oBk(event,this,'o5')">
+      </div>
+      <div id="lStOtp" style="font-family:'Share Tech Mono',monospace;font-size:10px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+      <button onclick="verifyOTP()" style="width:100%;padding:11px;background:var(--g1);border:none;border-radius:2px;color:#fff;font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;cursor:pointer">VERIFY & LAUNCH</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- USER BAR (shown after login) -->
+<div class="login-user-bar" id="userBar">
+  <span id="userBarName">GUEST</span>
+  <span style="color:rgba(255,255,255,.3)">|</span>
+  <span style="cursor:pointer;color:#e74c3c" onclick="doLogout()">LOGOUT</span>
+</div>
+
+
+<!-- ══════════ IMAGE GALLERY ══════════ -->
+<div id="galleryOv">
+  <div class="gallery-hdr">
+    <span style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:#f39c12">🖼 IMAGE GALLERY</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="clearGallery()" style="background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:#e74c3c;font-family:'Orbitron',monospace;font-size:8px;padding:5px 10px;cursor:pointer">CLEAR ALL</button>
+      <button onclick="closeGallery()" style="background:none;border:1px solid rgba(192,57,43,.4);color:#c0392b;width:28px;height:28px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+</div>
+
+<div id="galOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:10000;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(192,57,43,.3)">
+    <span style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">🖼 IMAGE GALLERY</span>
+    <div style="display:flex;gap:8px">
+      <button class="sett-btn" onclick="clearGallery()" style="font-size:9px">🗑 CLEAR</button>
+      <button class="sett-btn" onclick="closeGallery()" style="font-size:9px">✕ CLOSE</button>
+    </div>
+  </div>
+  <div id="galGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:12px;overflow-y:auto;flex:1"></div>
+  <div id="galEmpty" style="display:none;text-align:center;padding:40px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim)">No images yet.</div>
+</div>
+<div id="camOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:10001;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+  <div style="font-family:'Orbitron',monospace;font-size:11px;color:var(--g1);letter-spacing:2px">📷 CAMERA AI</div>
+  <video id="camVideo" style="width:min(90vw,400px);border:1px solid rgba(192,57,43,.4);border-radius:4px" autoplay playsinline></video>
+  <canvas id="camCanvas" style="display:none"></canvas>
+  <div style="display:flex;gap:10px">
+    <button class="lb-btn primary" style="padding:10px 24px" onclick="snapCamera()">📸 SNAP &amp; ANALYSE</button>
+    <button class="lb-btn ghost" style="padding:10px 24px" onclick="closeCamera()">✕ CLOSE</button>
+  </div>
+  <div id="camSt" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim)"></div>
+</div>
+</body>
+</html>
